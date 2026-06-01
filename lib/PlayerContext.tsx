@@ -24,9 +24,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(0.8);
-  
+
   const howlRef = useRef<Howl | null>(null);
   const requestRef = useRef<number | null>(null);
+  const shouldAutoplayRef = useRef(false);
 
   const updateProgress = useCallback(() => {
     if (howlRef.current && isPlaying) {
@@ -42,41 +43,55 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isPlaying) {
       requestRef.current = requestAnimationFrame(updateProgress);
-    } else {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    } else if (requestRef.current) {
+      cancelAnimationFrame(requestRef.current);
     }
+
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
   }, [isPlaying, updateProgress]);
 
+  const skip = useCallback((dir: number) => {
+    const idx = TRACKS.findIndex((t) => t.id === currentTrack.id);
+    const next = TRACKS[(idx + dir + TRACKS.length) % TRACKS.length];
+    shouldAutoplayRef.current = true;
+    setCurrentTrack(next);
+    setProgress(0);
+  }, [currentTrack.id]);
+
   const loadTrack = useCallback((track: Track) => {
     if (howlRef.current) {
       howlRef.current.unload();
     }
-    
-    // Using a sample audio file if no real URL is provided. 
-    // Since the original data had placeholders, I'll use a public test mp3.
-    // In a real app, track.url would be used.
-    const audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"; 
+
+    const audioUrl = track.src;
 
     howlRef.current = new Howl({
       src: [audioUrl],
       html5: true,
-      volume: volume,
+      volume,
       onplay: () => setIsPlaying(true),
       onpause: () => setIsPlaying(false),
       onstop: () => setIsPlaying(false),
       onend: () => {
         setIsPlaying(false);
         setProgress(0);
-        // Auto skip to next could be added here
+        shouldAutoplayRef.current = true;
+        skip(1);
       }
     });
-  }, [volume]);
+  }, [skip, volume]);
 
   useEffect(() => {
     loadTrack(currentTrack);
+
+    if (shouldAutoplayRef.current && howlRef.current) {
+      shouldAutoplayRef.current = false;
+      howlRef.current.play();
+      setIsPlaying(true);
+    }
+
     return () => {
       if (howlRef.current) howlRef.current.unload();
     };
@@ -90,14 +105,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const play = useCallback((track?: Track) => {
     if (track && track.id !== currentTrack.id) {
+      shouldAutoplayRef.current = true;
       setCurrentTrack(track);
-      // loadTrack will be called by useEffect
+      return;
     }
+
     if (howlRef.current) {
       howlRef.current.play();
       setIsPlaying(true);
     }
-  }, [currentTrack]);
+  }, [currentTrack.id]);
 
   const pause = useCallback(() => {
     if (howlRef.current) {
@@ -111,17 +128,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     else play();
   }, [isPlaying, pause, play]);
 
-  const skip = useCallback((dir: number) => {
-    const idx = TRACKS.findIndex(t => t.id === currentTrack.id);
-    const next = TRACKS[(idx + dir + TRACKS.length) % TRACKS.length];
-    setCurrentTrack(next);
-    setProgress(0);
-    // play will be called after currentTrack changes? 
-    // Actually we should probably play it immediately after load.
-    // Let's add an autoplay effect or just call play in the skip logic.
-    setTimeout(() => play(), 100); // Small delay to allow unload/load
-  }, [currentTrack, play]);
-
   const setManualProgress = useCallback((p: number) => {
     if (howlRef.current) {
       const duration = howlRef.current.duration();
@@ -131,11 +137,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <PlayerContext.Provider value={{ 
-      currentTrack, isPlaying, progress, volume, 
-      setVolume, play, pause, toggle, skip, 
-      setProgress: setManualProgress 
-    }}>
+    <PlayerContext.Provider
+      value={{
+        currentTrack,
+        isPlaying,
+        progress,
+        volume,
+        setVolume,
+        play,
+        pause,
+        toggle,
+        skip,
+        setProgress: setManualProgress
+      }}
+    >
       {children}
     </PlayerContext.Provider>
   );

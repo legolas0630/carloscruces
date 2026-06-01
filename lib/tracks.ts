@@ -6,6 +6,7 @@ export interface Track {
   color: string;
   img: string;
   desc: string;
+  src: string; 
 }
 
 export interface MerchItem {
@@ -33,10 +34,10 @@ export interface Expedition {
 }
 
 export const TRACKS: Track[] = [
-  { id: 1, title: "SUBZERO-01", bpm: "148 BPM", duration: "7:23", color: "#a8ff00", img: "https://via.placeholder.com/300x300/0a0a0a/a8ff00?text=SZ-01", desc: "Industrial kick patterns layered over frozen sub frequencies." },
-  { id: 2, title: "ACID DESCENT", bpm: "152 BPM", duration: "6:47", color: "#00ffcc", img: "https://via.placeholder.com/300x300/0a0a0a/00ffcc?text=ACID", desc: "TB-303 mutations spiraling into club floor darkness." },
-  { id: 3, title: "RITUAL LOOP", bpm: "145 BPM", duration: "8:12", color: "#ff4400", img: "https://via.placeholder.com/300x300/0a0a0a/ff4400?text=RITUAL", desc: "Hypnotic percussion architecture built for ritual states." },
-  { id: 4, title: "VOID SIGNAL", bpm: "155 BPM", duration: "9:04", color: "#cc00ff", img: "https://via.placeholder.com/300x300/0a0a0a/cc00ff?text=VOID", desc: "Deep space transmissions filtered through industrial machinery." }
+  { id: 1, title: "Chill beat 1", bpm: "148 BPM", duration: "7:23", color: "#a8ff00", img: "https://via.placeholder.com/300x300/0a0a0a/a8ff00?text=SZ-01", desc: "Industrial kick patterns layered over frozen sub frequencies.", src: "/beats/cumbia-malice.mp3" },
+  { id: 2, title: "Chill beat 2", bpm: "152 BPM", duration: "6:47", color: "#00ffcc", img: "https://via.placeholder.com/300x300/0a0a0a/00ffcc?text=ACID", desc: "TB-303 mutations spiraling into club floor darkness.", src: "/beats/cumbia-malicia.mp3" },
+  { id: 3, title: "Cumbia Confessions", bpm: "145 BPM", duration: "8:12", color: "#ff4400", img: "https://via.placeholder.com/300x300/0a0a0a/ff4400?text=RITUAL", desc: "Hypnotic percussion architecture built for ritual states.", src: "/beats/cumbia-confessions.mp3" },
+  { id: 4, title: "Asfalto", bpm: "155 BPM", duration: "9:04", color: "#cc00ff", img: "https://via.placeholder.com/300x300/0a0a0a/cc00ff?text=VOID", desc: "Deep space transmissions filtered through industrial machinery.", src: "/beats/Asfalto.mp3" }
 ];
 
 export const MERCH: MerchItem[] = [
