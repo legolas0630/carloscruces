@@ -7,6 +7,9 @@ export interface Track {
   img: string;
   desc: string;
   src: string; 
+  sleeveImg?: string;
+  genre: string;
+  type: 'EP' | 'Single';
 }
 
 export interface MerchItem {
@@ -34,10 +37,36 @@ export interface Expedition {
 }
 
 export const TRACKS: Track[] = [
-  { id: 1, title: "Chill beat 1", bpm: "148 BPM", duration: "7:23", color: "#a8ff00", img: "https://via.placeholder.com/300x300/0a0a0a/a8ff00?text=SZ-01", desc: "Industrial kick patterns layered over frozen sub frequencies.", src: "/beats/cumbia-malice.mp3" },
-  { id: 2, title: "Chill beat 2", bpm: "152 BPM", duration: "6:47", color: "#00ffcc", img: "https://via.placeholder.com/300x300/0a0a0a/00ffcc?text=ACID", desc: "TB-303 mutations spiraling into club floor darkness.", src: "/beats/cumbia-malicia.mp3" },
-  { id: 3, title: "Cumbia Confessions", bpm: "145 BPM", duration: "8:12", color: "#ff4400", img: "https://via.placeholder.com/300x300/0a0a0a/ff4400?text=RITUAL", desc: "Hypnotic percussion architecture built for ritual states.", src: "/beats/cumbia-confessions.mp3" },
-  { id: 4, title: "Asfalto", bpm: "155 BPM", duration: "9:04", color: "#cc00ff", img: "https://via.placeholder.com/300x300/0a0a0a/cc00ff?text=VOID", desc: "Deep space transmissions filtered through industrial machinery.", src: "/beats/asfalto.mp3" }
+  { 
+    id: 1, title: "SUBZERO-01", bpm: "148 BPM", duration: "7:23", color: "#a8ff00", 
+    img: "https://via.placeholder.com/300x300/0a0a0a/a8ff00?text=TECHNO", 
+    desc: "Industrial kick patterns layered over frozen sub frequencies.", 
+    src: "/beats/cumbia-malice.mp3", genre: "TECHNO", type: "Single" 
+  },
+  { 
+    id: 2, title: "CUMBIA MALICE", bpm: "105 BPM", duration: "6:47", color: "#00ffcc", 
+    img: "https://via.placeholder.com/300x300/0a0a0a/00ffcc?text=CUMBIA", 
+    desc: "Heavy bass meeting traditional rhythms.", 
+    src: "/beats/cumbia-malicia.mp3", genre: "CUMBIA", type: "EP" 
+  },
+  { 
+    id: 3, title: "VOID DRIFT", bpm: "90 BPM", duration: "3:12", color: "#cc00ff", 
+    img: "https://via.placeholder.com/300x300/0a0a0a/cc00ff?text=RAP+BEAT", 
+    desc: "Lo-fi textures for late night sessions.", 
+    src: "/beats/asfalto.mp3", genre: "RAP BEATS", type: "Single" 
+  },
+  { 
+    id: 4, title: "ROOTS SIGNAL", bpm: "140 BPM", duration: "5:20", color: "#ff4400", 
+    img: "https://via.placeholder.com/300x300/0a0a0a/ff4400?text=DUB", 
+    desc: "Deep reverb and delay-heavy sound system pressure.", 
+    src: "/beats/cumbia-confessions.mp3", genre: "REGGAE DUB", type: "EP" 
+  },
+  { 
+    id: 5, title: "ASPHALT", bpm: "155 BPM", duration: "9:04", color: "#ffffff", 
+    img: "/artwork/asfalto.jpg", 
+    desc: "Machine-soul transmissions.", 
+    src: "/beats/asfalto.mp3", genre: "TECHNO", type: "Single" 
+  }
 ];
 
 export const MERCH: MerchItem[] = [

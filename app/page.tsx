@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePlayer } from "@/lib/PlayerContext";
@@ -8,6 +8,17 @@ import VinylPlayer from "@/components/VinylPlayer";
 
 export default function HomePage() {
   const { currentTrack, isPlaying } = usePlayer();
+  const [playerSize, setPlayerSize] = useState(260);
+
+  useEffect(() => {
+    const handleResize = () => {
+      // Use 200px for mobile to ensure it fits alongside hero text, 260px for desktop
+      setPlayerSize(window.innerWidth < 480 ? 200 : 260);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const links = [
     { label: "MUSIC", sub: "4 TRACKS · UNDERGROUND TECHNO", href: "/music", color: "#a8ff00" },
@@ -17,7 +28,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 2rem 100px" }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 sm:px-8">
       {/* Noise texture */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0, opacity: 0.03,
@@ -64,7 +75,7 @@ export default function HomePage() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginBottom: "2rem" }}>
-          <VinylPlayer size={260} />
+          <VinylPlayer size={playerSize} />
         </div>
 
         <AnimatePresence mode="wait">
@@ -83,7 +94,7 @@ export default function HomePage() {
         </AnimatePresence>
 
         {/* Linktree grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", maxWidth: 460, width: "100%", margin: "0 auto" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-[460px] w-full mx-auto">
           {links.map((l, i) => (
             <Link key={l.href} href={l.href} style={{ textDecoration: "none" }}>
               <motion.button
@@ -112,7 +123,7 @@ export default function HomePage() {
 
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
-          style={{ display: "flex", gap: "2rem", justifyContent: "center", marginTop: "3rem" }}
+          className="flex flex-wrap gap-6 sm:gap-8 justify-center mt-12"
         >
           {["BANDCAMP", "SOUNDCLOUD", "RA", "INSTAGRAM"].map(s => (
             <motion.a

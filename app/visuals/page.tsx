@@ -9,10 +9,10 @@ export default function VisualsPage() {
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
-    <div style={{ minHeight: "100vh", padding: "100px 2.5rem 100px", maxWidth: 1100, margin: "0 auto" }}>
+    <div className="min-h-screen py-24 px-4 sm:px-10 max-w-[1100px] mx-auto">
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
         <SectionHeader label="VISUALS" sub="GRAPHIC DESIGN · ART DIRECTION" />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginTop: "3rem" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-12">
           {VISUALS.map((v, i) => (
             <motion.div
               key={v.id}

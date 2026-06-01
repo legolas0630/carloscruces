@@ -11,10 +11,15 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/music/page": [
+    "/expeditions/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/music/page.js"
+      "static/chunks/app/expeditions/page.js"
+    ],
+    "/merch/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/merch/page.js"
     ]
   }
 }
