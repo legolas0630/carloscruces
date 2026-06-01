@@ -60,7 +60,7 @@ export default function HomePage() {
           fontSize: "clamp(0.7rem, 2vw, 1rem)", letterSpacing: "0.6em",
           color: "#a8ff00", marginTop: "0.75rem", marginBottom: "3rem"
         }}>
-          UNDERGROUND · HARD TECHNO · MX
+          ASCEND · DESCEND · TRANSCEND
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", marginBottom: "2rem" }}>
