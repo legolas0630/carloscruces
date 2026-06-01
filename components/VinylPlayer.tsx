@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { usePlayer } from "@/lib/PlayerContext";
 
@@ -13,6 +13,15 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
   const rotation = useRef(0);
   const animRef = useRef<number | null>(null);
   const vinylRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(true);
+
+  // Detect screen size on mount to completely bypass 3D calculations on mobile
+  useEffect(() => {
+    const checkDevice = () => setIsMobile(window.innerWidth < 768);
+    checkDevice();
+    window.addEventListener("resize", checkDevice);
+    return () => window.removeEventListener("resize", checkDevice);
+  }, []);
 
   // 3D Tilt Logic
   const x = useMotionValue(0);
@@ -25,11 +34,12 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
   const glossRotate = useSpring(useTransform(x, [-0.5, 0.5], [-45, 45]), { stiffness: 150, damping: 20 });
   const glossOpacity = useSpring(useTransform(y, [-0.5, 0.5], [0.8, 0.4]), { stiffness: 150, damping: 20 });
 
-  // Arm parallax offsets: exaggerated movement to simulate height
+  // Arm parallax offsets
   const armX = useSpring(useTransform(x, [-0.5, 0.5], [8, -8]), { stiffness: 150, damping: 20 });
   const armY = useSpring(useTransform(y, [-0.5, 0.5], [8, -8]), { stiffness: 150, damping: 20 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isMobile) return; // Stop layout calculations on touch screens
     const rect = e.currentTarget.getBoundingClientRect();
     const xPct = (e.clientX - rect.left) / rect.width - 0.5;
     const yPct = (e.clientY - rect.top) / rect.height - 0.5;
@@ -42,19 +52,32 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     y.set(0);
   };
 
+  // Optimized Loop: Strictly starts and kills itself depending on playback state
   useEffect(() => {
-    let lastTime: number | null = null;
+    if (!isPlaying) {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      return;
+    }
+
+    let lastTime = performance.now();
+    
     const animate = (time: number) => {
-      if (isPlaying) {
-        if (lastTime) rotation.current += (time - lastTime) * 0.04;
-        lastTime = time;
-        if (vinylRef.current) vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
-      } else {
-        lastTime = null;
+      const delta = time - lastTime;
+      lastTime = time;
+
+      // Update rotation angle cleanly
+      rotation.current = (rotation.current + delta * 0.04) % 360;
+
+      // Direct DOM manipulation completely cuts out React re-render lags
+      if (vinylRef.current) {
+        vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
       }
+
       animRef.current = requestAnimationFrame(animate);
     };
+
     animRef.current = requestAnimationFrame(animate);
+
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
@@ -66,8 +89,14 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
       onMouseLeave={handleMouseLeave}
       onClick={toggle}
       style={{
-        position: "relative", width: size * 1.2, height: size, cursor: "pointer",
-        perspective: 1000, rotateX, rotateY, transformStyle: "preserve-3d",
+        position: "relative", 
+        width: size * 1.2, 
+        height: size, 
+        cursor: "pointer",
+        perspective: 1000, 
+        rotateX: isMobile ? 0 : rotateX, // Strip 3D on mobile
+        rotateY: isMobile ? 0 : rotateY, 
+        transformStyle: "preserve-3d",
         margin: "0 auto"
       }}
       className="flex items-center justify-center"
@@ -75,16 +104,16 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
       {/* Record Sleeve */}
       <motion.div
         animate={{ 
-          x: isPlaying ? -size * 0.45 : -size * 0.15,
-          rotateY: isPlaying ? -15 : 0,
-          opacity: isPlaying ? 0.6 : 1
+          x: isPlaying ? -size * 0.42 : -size * 0.1,
+          rotateY: isPlaying && !isMobile ? -15 : 0,
+          opacity: isPlaying ? 0.7 : 1
         }}
-        transition={{ type: "spring", stiffness: 40, damping: 15 }}
+        transition={{ type: "spring", stiffness: 50, damping: 18 }}
         style={{
           width: size, height: size, background: "#111", borderRadius: 4,
           overflow: "hidden", boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
           zIndex: 10, position: "absolute",
-          transformStyle: "preserve-3d", translateZ: 40,
+          transformStyle: "preserve-3d", translateZ: isMobile ? 0 : 40,
           border: "1px solid #222"
         }}
       >
@@ -96,7 +125,6 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
             opacity: 0.8, filter: "saturate(0.8) contrast(1.1)" 
           }} 
         />
-        {/* Sleeve Matte/Paper Texture Overlay */}
         <div style={{
           position: "absolute", inset: 0, 
           background: `
@@ -108,27 +136,26 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
         }} />
       </motion.div>
 
-      {/* Disc & Arm Assembly - Slides out on load */}
+      {/* Disc & Arm Assembly */}
       <motion.div
-        initial={{ x: -size * 0.2 }}
-        animate={{ x: isPlaying ? size * 0.35 : size * 0.1 }}
-        transition={{ delay: 0.5, duration: 1.2, ease: "circOut" }}
+        initial={{ x: -size * 0.1 }}
+        animate={{ x: isPlaying ? size * 0.38 : size * 0.08 }}
+        transition={{ type: "spring", stiffness: 40, damping: 16 }}
         style={{ position: "relative", width: size, height: size, zIndex: 5, transformStyle: "preserve-3d" }}
       >
         {/* Background Glow */}
         <motion.div
-          animate={{ opacity: isPlaying ? [0.4, 1, 0.4] : 0.2, scale: isPlaying ? [1, 1.04, 1] : 1 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          animate={{ opacity: isPlaying ? [0.4, 0.8, 0.4] : 0.2 }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           style={{
-            position: "absolute", inset: -20, borderRadius: "50%",
-            boxShadow: `0 0 40px 20px ${currentTrack.color}44, 0 0 80px 40px ${currentTrack.color}22`,
+            position: "absolute", inset: -10, borderRadius: "50%",
+            boxShadow: `0 0 40px 10px ${currentTrack.color}33`,
             pointerEvents: "none"
           }}
         />
 
         {/* Vinyl Disc */}
         <div
-          ref={vinylRef}
           style={{
             width: size, height: size, borderRadius: "50%",
             position: "relative", overflow: "hidden",
@@ -137,20 +164,24 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
             display: "flex", alignItems: "center", justifyContent: "center"
           }}
         >
-          <img src={currentTrack.img} alt={currentTrack.title} style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }} />
-          {/* Grooves */}
-          <div style={{
-            position: "absolute", inset: 0, borderRadius: "50%",
-            background: `repeating-radial-gradient(circle, rgba(0,0,0,0) 0px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.05) 3px)`,
-            opacity: 0.6, pointerEvents: "none"
-          }} />
+          {/* We style transform directly via ref in loop, leaving standard style clean */}
+          <div ref={vinylRef} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <img src={currentTrack.img} alt={currentTrack.title} style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover", opacity: 0.85, borderRadius: "50%" }} />
+            {/* Grooves */}
+            <div style={{
+              position: "absolute", inset: 0, borderRadius: "50%",
+              background: `repeating-radial-gradient(circle, rgba(0,0,0,0) 0px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.05) 3px)`,
+              opacity: 0.6, pointerEvents: "none"
+            }} />
+          </div>
+
           {/* Dynamic Light/Gloss */}
           <motion.div 
             style={{
               position: "absolute", inset: 0, borderRadius: "50%",
-              background: `conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.15) 10%, transparent 25%, transparent 45%, rgba(255,255,255,0.2) 50%, transparent 55%, transparent 80%, rgba(255,255,255,0.15) 90%, transparent 100%)`,
+              background: `conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.12) 10%, transparent 25%, transparent 45%, rgba(255,255,255,0.15) 50%, transparent 55%, transparent 80%, rgba(255,255,255,0.12) 90%, transparent 100%)`,
               pointerEvents: "none", zIndex: 1, mixBlendMode: "screen",
-              rotate: glossRotate, opacity: glossOpacity, translateZ: 10
+              rotate: isMobile ? 0 : glossRotate, opacity: isMobile ? 0.6 : glossOpacity, translateZ: 10
             }} 
           />
           {/* Center Spindle */}
@@ -162,23 +193,23 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
           style={{ 
             position: "absolute", top: 0, right: 0, width: "100%", height: "100%", 
             pointerEvents: "none", zIndex: 15,
-            x: armX, y: armY, 
-            translateZ: 80, // Lifted high
+            x: isMobile ? 0 : armX, y: isMobile ? 0 : armY, 
+            translateZ: isMobile ? 0 : 80,
             transformStyle: "preserve-3d"
           }}
         >
           <div style={{
             position: "absolute", top: size * 0.02, right: size * 0.02,
-            width: size * 0.15, height: size * 0.15, borderRadius: "50%",
+            width: size * 0.12, height: size * 0.12, borderRadius: "50%",
             background: "radial-gradient(circle at 30% 30%, #444, #050505)",
             border: "1px solid #222", boxShadow: "0 4px 12px rgba(0,0,0,0.6)"
           }} />
           <motion.div
-            animate={{ rotate: isPlaying ? 20 + (progress * 0.12) : -45 }}
-            transition={{ type: "spring", stiffness: 35, damping: 12 }}
+            animate={{ rotate: isPlaying ? 22 + (progress * 0.08) : -40 }}
+            transition={{ type: "spring", stiffness: 45, damping: 15 }}
             style={{
-              position: "absolute", top: size * 0.095, right: size * 0.095,
-              width: size * 0.02, height: size * 0.8,
+              position: "absolute", top: size * 0.08, right: size * 0.08,
+              width: size * 0.018, height: size * 0.75,
               background: "linear-gradient(to right, #555, #222, #555)",
               transformOrigin: "top center", borderRadius: 4,
               boxShadow: "4px 4px 15px rgba(0,0,0,0.5)"
@@ -186,9 +217,9 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
           >
             <div style={{
               position: "absolute", bottom: -2, left: "-150%",
-              width: size * 0.08, height: size * 0.16,
-              background: "#111", borderRadius: "2px 2px 8px 8px",
-              border: "1px solid #333", transform: "rotate(-15deg)",
+              width: size * 0.07, height: size * 0.14,
+              background: "#111", borderRadius: "2px 2px 6px 6px",
+              border: "1px solid #333", transform: "rotate(-12deg)",
               display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 6
             }}>
                <div style={{ width: 2, height: 6, background: currentTrack.color, boxShadow: `0 0 8px ${currentTrack.color}`, opacity: isPlaying ? 0.8 : 0, transition: "opacity 0.5s" }} />
@@ -199,7 +230,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
         {/* Play Overlay */}
         <motion.div
           initial={{ opacity: 0 }}
-          whileHover={{ opacity: 1 }}
+          whileHover={isMobile ? { opacity: 0 } : { opacity: 1 }} // Hover features disabled for mobile screens
           style={{
             position: "absolute", inset: 0, borderRadius: "50%",
             background: "rgba(0,0,0,0.5)",
