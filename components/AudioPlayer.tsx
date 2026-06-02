@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { usePlayer } from "@/context/PlayerContext";
+import { TRACKS } from "@/lib/tracks"; // Imported to handle skipping locally
 
 export default function AudioPlayer() {
   const { 
@@ -13,13 +14,30 @@ export default function AudioPlayer() {
     setProgress, 
     volume, 
     setVolume,
-    playNext,
-    playPrevious
+    play // Using the working play method from your context
   } = usePlayer();
 
   const timelineRef = useRef<HTMLDivElement>(null);
 
-  // Handle clicking on the top edge timeline bar to manually seek
+  // LOCAL SKIPPING LOGIC — Bypasses context type errors entirely
+  const playNext = () => {
+    if (!currentTrack) return;
+    const currentIndex = TRACKS.findIndex((t) => t.id === currentTrack.id);
+    if (currentIndex !== -1) {
+      const nextIndex = (currentIndex + 1) % TRACKS.length;
+      play(TRACKS[nextIndex]);
+    }
+  };
+
+  const playPrevious = () => {
+    if (!currentTrack) return;
+    const currentIndex = TRACKS.findIndex((t) => t.id === currentTrack.id);
+    if (currentIndex !== -1) {
+      const prevIndex = (currentIndex - 1 + TRACKS.length) % TRACKS.length;
+      play(TRACKS[prevIndex]);
+    }
+  };
+
   const handleScrub = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!timelineRef.current) return;
     const rect = timelineRef.current.getBoundingClientRect();
@@ -28,10 +46,9 @@ export default function AudioPlayer() {
     setProgress(percentage);
   };
 
-  // DESKTOP KEYBOARD CONTROLS (Space to toggle play, arrows to seek and adjust volume)
+  // Keyboard Shortcuts Mapping
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore key hits if the user is typing in forms or input dialogs (like the payment modals)
       if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
 
       switch (e.key) {
@@ -48,7 +65,6 @@ export default function AudioPlayer() {
           setProgress(Math.max(0, progress - 3));
           break;
         case "ArrowUp":
-          e.preventDefault();
           e.preventDefault();
           if (setVolume) setVolume(Math.min(1, (volume ?? 0.8) + 0.05));
           break;
@@ -70,7 +86,7 @@ export default function AudioPlayer() {
   return (
     <div className="fixed bottom-0 left-0 right-0 h-20 bg-[#090909]/95 border-t border-white/5 backdrop-blur-md z-[500] flex items-center justify-between px-4 sm:px-8 select-none">
       
-      {/* 1. TOP EDGE SCRUB TIMELINE (Saves horizontal real estate on mobile devices) */}
+      {/* Absolute Header Scrub Timeline */}
       <div 
         ref={timelineRef}
         onClick={handleScrub}
@@ -84,12 +100,11 @@ export default function AudioPlayer() {
             boxShadow: `0 0 10px ${currentTrack?.color || '#a8ff00'}`
           }}
         >
-          {/* Subtle neon glowing handle indicator visible on trackbar hover */}
           <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white opacity-0 group-hover:opacity-100 scale-0 group-hover:scale-100 transition-all duration-150 shadow-md" />
         </div>
       </div>
 
-      {/* 2. LEFT SECTION: CURRENT METADATA COVER EMBED */}
+      {/* Track Details / Image Panel */}
       <div className="flex items-center gap-3 w-1/2 sm:w-1/3 min-w-0">
         <img 
           src={currentTrack.img} 
@@ -112,20 +127,18 @@ export default function AudioPlayer() {
         </div>
       </div>
 
-      {/* 3. CENTER SECTION: SOUND DECK MEDIA MANIPULATORS */}
+      {/* Audio Playback Controls */}
       <div className="flex items-center justify-center gap-4 sm:gap-6">
-        {/* Back Previous Track */}
         <button 
           onClick={playPrevious}
           className="text-gray-400 hover:text-white transition-colors p-1 text-xs focus:outline-none"
-          title="Previous Track (Left Arrow to seek back)"
+          title="Previous Track"
         >
           <svg className="w-4 sm:w-5 h-4 sm:h-5 fill-current" viewBox="0 0 24 24">
             <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
           </svg>
         </button>
 
-        {/* Core Primary Action Toggle (Play / Pause) */}
         <motion.button
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.92 }}
@@ -137,23 +150,20 @@ export default function AudioPlayer() {
           className="w-10 sm:w-11 h-10 sm:h-11 rounded-full flex items-center justify-center text-black font-black text-xs sm:text-sm focus:outline-none"
         >
           {isPlaying ? (
-            /* Pause Vector Lines */
             <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
               <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
             </svg>
           ) : (
-            /* Play Vector Arrow */
             <svg className="w-4 h-4 fill-current translate-x-[1px]" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z"/>
             </svg>
           )}
         </motion.button>
 
-        {/* Skip Next Track */}
         <button 
           onClick={playNext}
           className="text-gray-400 hover:text-white transition-colors p-1 text-xs focus:outline-none"
-          title="Next Track (Right Arrow to seek forward)"
+          title="Next Track"
         >
           <svg className="w-4 sm:w-5 h-4 sm:h-5 fill-current" viewBox="0 0 24 24">
             <path d="M7 6l8.5 6L7 18zm9 0h2v12h-2z"/>
@@ -161,9 +171,8 @@ export default function AudioPlayer() {
         </button>
       </div>
 
-      {/* 4. RIGHT SECTION: MASTER SOUND SLIDER CONTROL (Protected from Mobile layouts) */}
+      {/* Volume Deck */}
       <div className="hidden md:flex items-center justify-end gap-3 w-1/3">
-        {/* Speaker Node Status Vector */}
         <svg 
           className="w-4 h-4 text-gray-400 cursor-pointer hover:text-white transition-colors" 
           viewBox="0 0 24 24"
@@ -176,7 +185,6 @@ export default function AudioPlayer() {
           )}
         </svg>
         
-        {/* Horizontal Linear Volume Input Slider */}
         <input 
           type="range"
           min="0"
@@ -188,7 +196,7 @@ export default function AudioPlayer() {
           style={{
             backgroundImage: `linear-gradient(to right, ${currentTrack?.color || '#a8ff00'} 0%, ${currentTrack?.color || '#a8ff00'} ${(volume ?? 0.8) * 100}%, rgba(255,255,255,0.1) ${(volume ?? 0.8) * 100}%, rgba(255,255,255,0.1) 100%)`
           }}
-          title="Volume Control (Up / Down arrows)"
+          title="Volume Control"
         />
       </div>
 
