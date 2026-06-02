@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePlayer } from "@/lib/PlayerContext";
+import { usePlayer } from "@/context/PlayerContext";
 import { TRACKS } from "@/lib/tracks";
 import VinylPlayer from "@/components/VinylPlayer";
 import SectionHeader from "@/components/SectionHeader";
@@ -140,19 +140,34 @@ function MusicContent() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleSupport = async () => {
+  const handleSupport = async (method: 'stripe' | 'mercadopago') => {
     if (!downloadTrack && !isEPDownload && !isLifetimePass) return;
     setIsProcessing(true);
     
-    // Simulate payment processing delay (e.g. Stripe checkout session creation)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsProcessing(false);
-    const trackId = isLifetimePass ? "lifetime" : isEPDownload ? "full_ep" : downloadTrack?.id;
-    setDownloadTrack(null);
-    setIsLifetimePass(false);
-    setIsEPDownload(false);
-    router.push(`/checkout/successful?track=${trackId}&type=digital&amount=${supportAmount}`);
+    try {
+      const trackId = isLifetimePass ? "lifetime" : isEPDownload ? "full_ep" : downloadTrack?.id;
+      const title = isLifetimePass ? "Lifetime Discography" : isEPDownload ? "Full EP Collection" : downloadTrack?.title;
+
+      const response = await fetch(`/api/checkout/${method}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parseFloat(supportAmount),
+          trackId: trackId,
+          title: title
+        }),
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Checkout failed");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -447,13 +462,22 @@ function MusicContent() {
                       className="bg-transparent border-b border-white/20 text-2xl font-bold text-white focus:outline-none focus:border-[#a8ff00] w-24 text-center"
                     />
                   </div>
-                  <button 
-                    disabled={isProcessing}
-                    className={`w-full py-3 ${isProcessing ? 'bg-[#a8ff00]/50 cursor-wait' : 'bg-[#a8ff00]'} text-black font-black text-xs tracking-[0.2em] rounded-sm hover:scale-[1.02] active:scale-[0.98] transition-all`}
-                    onClick={handleSupport}
-                  >
-                    {isProcessing ? 'PROCESSING...' : 'SUPPORT & DOWNLOAD'}
-                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      disabled={isProcessing}
+                      className={`py-3 ${isProcessing ? 'bg-[#a8ff00]/50 cursor-wait' : 'bg-[#a8ff00]'} text-black font-black text-[0.6rem] tracking-[0.2em] rounded-sm hover:scale-[1.02] active:scale-[0.98] transition-all`}
+                      onClick={() => handleSupport('stripe')}
+                    >
+                      {isProcessing ? '...' : 'STRIPE'}
+                    </button>
+                    <button 
+                      disabled={isProcessing}
+                      className={`py-3 ${isProcessing ? 'bg-[#009ee3]/50 cursor-wait' : 'bg-[#009ee3]'} text-white font-black text-[0.6rem] tracking-[0.2em] rounded-sm hover:scale-[1.02] active:scale-[0.98] transition-all`}
+                      onClick={() => handleSupport('mercadopago')}
+                    >
+                      {isProcessing ? '...' : 'MERCADO PAGO'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="relative py-2">

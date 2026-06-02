@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform, animate } from "framer-motion";
-import { usePlayer } from "@/lib/PlayerContext";
+import { usePlayer } from "@/context/PlayerContext";
 
 interface VinylPlayerProps {
   size?: number;

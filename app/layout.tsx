@@ -2,11 +2,15 @@ import React from "react";
 import type { Metadata } from "next";
 import { Barlow, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
-import { PlayerProvider } from "@/lib/PlayerContext";
+
+// Import ONLY your custom unified client provider wrapper
+import Providers from "@/components/Providers";
+
+// Components
 import Nav from "@/components/Nav";
 import AudioPlayer from "@/components/AudioPlayer";
 import ParallaxBackground from "@/components/ParallaxBackground";
-
+import { CartProvider } from "@/context/CartContext";
 const barlow = Barlow({
   subsets: ["latin"],
   weight: ["300", "400"],
@@ -34,14 +38,15 @@ export default function RootLayout({
       <body
         className={`${barlow.variable} ${barlowCondensed.variable} antialiased bg-black text-[#f0f0f0] font-barlow-condensed overflow-x-hidden`}
       >
-        <PlayerProvider>
+        {/* Using your custom client boundary component to handle the contexts safely */}
+        <Providers>
           <div className="relative min-h-screen">
             <ParallaxBackground />
             <Nav />
             <main>{children}</main>
             <AudioPlayer />
           </div>
-        </PlayerProvider>
+        </Providers>
       </body>
     </html>
   );

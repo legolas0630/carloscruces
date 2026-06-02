@@ -1,4 +1,10 @@
 {
-  "/music/page": "app/music/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/cart/page": "app/cart/page.js",
+  "/visuals/page": "app/visuals/page.js",
+  "/merch/page": "app/merch/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/expeditions/page": "app/expeditions/page.js",
   "/page": "app/page.js"
 }
