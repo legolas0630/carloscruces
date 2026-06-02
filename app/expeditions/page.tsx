@@ -99,7 +99,7 @@ export default function ExpeditionsPage() {
           transition={{ duration: 0.8 }}
           className="text-left border-b border-zinc-900 pb-12"
         >
-          <SectionHeader title="EXPEDITIONS" subtitle="FIELD RADAR / OUTDOOR DISPLACEMENT TACTICS" />
+          <SectionHeader label="EXPEDITIONS" subtitle="FIELD RADAR / OUTDOOR DISPLACEMENT TACTICS" />
           
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
             <div className="lg:col-span-7">
