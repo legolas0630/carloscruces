@@ -1,15 +1,23 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { usePlayer } from "@/lib/PlayerContext";
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { isPlaying, currentTrack } = usePlayer();
   const navRef = useRef<HTMLElement>(null);
+
+  const pulseDuration = React.useMemo(() => {
+    const bpm = parseFloat(currentTrack.bpm) || 120;
+    return 60 / bpm;
+  }, [currentTrack.bpm]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -80,7 +88,7 @@ export default function Nav() {
       {/* Main Top Navbar Row */}
       <motion.nav
         ref={navRef}
-        className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-6 sm:px-10 h-16 transition-all duration-300"
+        className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-6 sm:px-10 h-20 transition-all duration-300"
         style={{
           background: (scrolled || isOpen) ? "rgba(10,10,10,0.85)" : "transparent",
           borderBottom: (scrolled || isOpen) ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
@@ -90,31 +98,30 @@ export default function Nav() {
         <Link href="/" style={{ textDecoration: "none" }}>
           <motion.div
             onClick={() => setIsOpen(false)}
-            whileHover={{ filter: "drop-shadow(0 0 12px #a8ff00)" }}
+            animate={isPlaying ? {
+              filter: [
+                `drop-shadow(0 0 8px ${currentTrack.color}44)`,
+                `drop-shadow(0 0 20px ${currentTrack.color}aa)`,
+                `drop-shadow(0 0 8px ${currentTrack.color}44)`
+              ],
+              scale: [1, 1.03, 1]
+            } : {
+              filter: "drop-shadow(0 0 0px transparent)",
+              scale: 1
+            }}
+            transition={{ duration: pulseDuration, repeat: isPlaying ? Infinity : 0, ease: "easeInOut" }}
+            whileHover={{ filter: `drop-shadow(0 0 15px ${currentTrack.color})`, scale: 1.05 }}
             style={{ cursor: "pointer", lineHeight: 1.05, userSelect: "none", zIndex: 102 }}
           >
-            <div
-              style={{
-                fontFamily: "var(--font-barlow-condensed), sans-serif",
-                fontWeight: 900,
-                fontSize: "0.9rem",
-                letterSpacing: "0.28em",
-                color: "#a8ff00",
-              }}
-            >
-              CARLOS
-            </div>
-            <div
-              style={{
-                fontFamily: "var(--font-barlow-condensed), sans-serif",
-                fontWeight: 900,
-                fontSize: "0.9rem",
-                letterSpacing: "0.28em",
-                color: "#f0f0f0",
-              }}
-            >
-              CRUCES
-            </div>
+            <Image 
+              src="/logo.png" 
+              alt="Carlos Cruces Logo" 
+              width={400} 
+              height={115} 
+              className="h-12 sm:h-14 w-auto object-contain"
+              sizes="(max-width: 640px) 180px, 250px"
+              priority
+            />
           </motion.div>
         </Link>
 

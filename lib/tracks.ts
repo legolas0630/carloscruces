@@ -45,7 +45,7 @@ export const TRACKS: Track[] = [
   },
   { 
     id: 2, title: "CUMBIA MALICIA", bpm: "105 BPM", duration: "", color: "#00ffcc", 
-    img: "/artwork/cumbia-villera.jpeg", 
+    img: "/artwork/cumbia-malice.jpeg", 
     desc: "Heavy bass meeting traditional rhythms.", 
     src: "/beats/cumbia-malicia.mp3", genre: "CUMBIA", type: "EP" 
   },
@@ -60,6 +60,18 @@ export const TRACKS: Track[] = [
     img: "/artwork/cumbia-confessions.jpeg", 
     desc: "chill ambient cumbia house for late night rides and early morning rituals.", 
     src: "/beats/cumbia-confessions.mp3", genre: "Cumbia House", type: "Single" 
+  },
+  { 
+    id: 5, title: "CUMBIA VILLERA", bpm: "105 BPM", duration: "", color: "#00ffcc", 
+    img: "/artwork/cumbia-villera.jpeg", 
+    desc: "Heavy bass meeting traditional Latin rhythms in a dark warehouse setting.", 
+    src: "/beats/cumbia-villera.mp3", genre: "CUMBIA", type: "Single" 
+  },
+  { 
+    id: 6, title: "Caida de Tlaloc", bpm: "152 BPM", duration: "", color: "#ff00cc", 
+    img: "/artwork/caida-de-tlaloc.JPEG", 
+    desc: "Aggressive industrial textures and high-velocity percussion.", 
+    src: "/beats/caida-de-tlaloc.mp3", genre: "TECHNO", type: "Single" 
   }
 ];
 

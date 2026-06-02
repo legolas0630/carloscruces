@@ -15,6 +15,10 @@ interface PlayerContextType {
   toggle: () => void;
   skip: (dir: number) => void;
   setProgress: (p: number) => void;
+  setRate: (r: number) => void;
+  setHighPass: (freq: number) => void;
+  setDistortion: (amount: number) => void;
+  setCrackle: (amount: number) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -27,31 +31,113 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [volume, setVolume] = useState(0.8);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const requestRef = useRef<number | null>(null);
   const shouldAutoplayRef = useRef(false);
 
-  const updateProgress = useCallback(() => {
-    if (audioRef.current && isPlaying) {
-      const currentTime = audioRef.current.currentTime;
-      const totalDuration = audioRef.current.duration;
-      if (totalDuration > 0) {
-        setProgress((currentTime / totalDuration) * 100);
-      }
-      requestRef.current = requestAnimationFrame(updateProgress);
+  const filterRef = useRef<BiquadFilterNode | null>(null);
+  const distortionRef = useRef<WaveShaperNode | null>(null);
+  const crackleGainRef = useRef<GainNode | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const makeDistortionCurve = (amount: number) => {
+    const k = amount * 100;
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < n_samples; ++i) {
+      const x = (i * 2) / n_samples - 1;
+      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
     }
-  }, [isPlaying]);
+    return curve;
+  };
+
+  const createCrackleBuffer = (ctx: AudioContext) => {
+    const duration = 4; // 4 seconds of unique noise
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      // Constant low-level surface hiss
+      data[i] = (Math.random() * 2 - 1) * 0.005;
+      // Random sparse pops/clicks
+      if (Math.random() > 0.99995) {
+        data[i] += (Math.random() * 2 - 1) * 0.3;
+      }
+    }
+    return buffer;
+  };
+
+  const initAudioCtx = useCallback(() => {
+    if (typeof window === "undefined" || audioCtxRef.current || !audioRef.current) return;
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioContextClass();
+      const source = ctx.createMediaElementSource(audioRef.current);
+      
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 20; // Standard bass floor
+
+      const distortion = ctx.createWaveShaper();
+      distortion.curve = makeDistortionCurve(0);
+      distortion.oversample = '4x';
+
+      const crackleGain = ctx.createGain();
+      crackleGain.gain.value = 0;
+      
+      const crackleSource = ctx.createBufferSource();
+      crackleSource.buffer = createCrackleBuffer(ctx);
+      crackleSource.loop = true;
+      crackleSource.connect(crackleGain);
+      crackleGain.connect(ctx.destination);
+      crackleSource.start();
+
+      source.connect(filter);
+      filter.connect(distortion);
+      distortion.connect(ctx.destination);
+
+      audioCtxRef.current = ctx;
+      filterRef.current = filter;
+      distortionRef.current = distortion;
+      crackleGainRef.current = crackleGain;
+    } catch (e) {
+      console.error("Web Audio API initialization failed", e);
+    }
+  }, []);
+
+  const setHighPass = useCallback((freq: number) => {
+    if (!audioCtxRef.current) initAudioCtx();
+    filterRef.current?.frequency.setTargetAtTime(freq, audioCtxRef.current!.currentTime, 0.04);
+  }, [initAudioCtx]);
+
+  const setDistortion = useCallback((amount: number) => {
+    if (!audioCtxRef.current) initAudioCtx();
+    if (distortionRef.current) {
+      distortionRef.current.curve = makeDistortionCurve(amount);
+    }
+  }, [initAudioCtx]);
+
+  const setCrackle = useCallback((amount: number) => {
+    if (!audioCtxRef.current) initAudioCtx();
+    crackleGainRef.current?.gain.setTargetAtTime(amount, audioCtxRef.current!.currentTime, 0.05);
+  }, [initAudioCtx]);
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
     if (isPlaying) {
-      requestRef.current = requestAnimationFrame(updateProgress);
-    } else if (requestRef.current) {
-      cancelAnimationFrame(requestRef.current);
+      setCrackle(0.2); // Subtle base crackle when playing
+      interval = setInterval(() => {
+        if (audioRef.current) {
+          const currentTime = audioRef.current.currentTime;
+          const totalDuration = audioRef.current.duration;
+          if (totalDuration > 0) {
+            setProgress((currentTime / totalDuration) * 100);
+          }
+        }
+      }, 200); // Update 5 times per second instead of 60+
+    } else {
+      setCrackle(0);
     }
-
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [isPlaying, updateProgress]);
+    return () => clearInterval(interval);
+  }, [isPlaying, setCrackle]);
 
   // Initialize audio element on mount
   useEffect(() => {
@@ -133,6 +219,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setRate = useCallback((r: number) => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = Math.max(0.1, Math.min(4, r));
+    }
+  }, []);
+
   return (
     <PlayerContext.Provider
       value={{
@@ -146,7 +238,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         pause,
         toggle,
         skip,
-        setProgress: setManualProgress
+        setProgress: setManualProgress,
+        setRate,
+        setHighPass,
+        setDistortion,
+        setCrackle
       }}
     >
       {children}

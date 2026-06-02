@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlayer } from "@/lib/PlayerContext";
 
@@ -17,6 +19,7 @@ function ControlBtn({ onClick, children }: { onClick: () => void; children: Reac
 
 export default function AudioPlayer() {
   const { currentTrack, isPlaying, progress, duration, volume, setVolume, toggle, skip, setProgress } = usePlayer();
+  const router = useRouter();
   const [showVolume, setShowVolume] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -71,12 +74,12 @@ export default function AudioPlayer() {
   return (
     <motion.div
       initial={{ y: 100 }} animate={{ y: 0 }} transition={{ type: "spring", damping: 20 }}
-      className="fixed bottom-0 left-0 right-0 z-[200] bg-[#0a0a0a]/95 border-t border-[#1a1a1a] backdrop-blur-xl flex items-center gap-3 sm:gap-6 px-4 sm:px-8 h-20 sm:h-[72px]"
+      className="fixed bottom-0 left-0 right-0 z-[200] bg-[#0a0a0a]/90 border-t border-white/5 backdrop-blur-lg sm:backdrop-blur-xl flex items-center gap-3 sm:gap-6 px-4 sm:px-8 h-20 sm:h-[72px]"
     >
       <div className="flex items-center gap-3 min-w-0 shrink-0 w-[9.5rem] sm:w-[14rem]">
-        <div style={{ width: 40, height: 40, borderRadius: 4, overflow: "hidden", border: `1px solid ${currentTrack.color}44`, flexShrink: 0 }}>
-        <img src={currentTrack.img} alt={currentTrack.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-      </div>
+        <div className="relative w-10 h-10 rounded-sm overflow-hidden border border-white/10 flex-shrink-0">
+          <Image src={currentTrack.img} alt={currentTrack.title} fill className="object-cover" />
+        </div>
         <div className="min-w-0 flex-1">
           <div style={{ fontFamily: "var(--font-barlow-condensed), sans-serif", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.1em", color: "#f0f0f0" }} className="truncate">
             {currentTrack.title}
@@ -84,6 +87,15 @@ export default function AudioPlayer() {
           <div style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 300, fontSize: "0.7rem", color: "#666", marginTop: 2 }} className="hidden sm:block">
             {currentTrack.bpm}
           </div>
+          <motion.button
+            whileHover={{ color: "#a8ff00" }}
+            onClick={() => {
+              // We direct the user to the music page with the track selected
+              // Or trigger the same modal if state was global
+              router.push(`/music?download=${currentTrack.id}`);
+            }}
+            className="text-[0.6rem] text-gray-600 tracking-tighter mt-1 uppercase font-bold sm:hidden"
+          >Download Track</motion.button>
         </div>
       </div>
 
@@ -102,6 +114,17 @@ export default function AudioPlayer() {
           {isPlaying ? "⏸" : "▶"}
         </motion.button>
         <ControlBtn onClick={() => skip(1)}>⏭</ControlBtn>
+        
+        <motion.button
+          whileHover={{ color: "#f0f0f0" }}
+          onClick={() => router.push(`/music?download=${currentTrack.id}`)}
+          className="hidden sm:block text-[#444] ml-2"
+          title="Download Current Track"
+        >
+          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+          </svg>
+        </motion.button>
       </div>
 
       <div 
@@ -136,15 +159,23 @@ export default function AudioPlayer() {
         </AnimatePresence>
 
         <div style={{ height: 3, background: "#1a1a1a", borderRadius: 2, position: "relative" }}>
-          <motion.div style={{
-            height: "100%", background: `linear-gradient(90deg, ${currentTrack.color}, #a8ff00)`,
-            borderRadius: 2, width: `${progress}%`, boxShadow: `0 0 8px ${currentTrack.color}`
-          }} />
-          <div style={{
-            position: "absolute", top: "50%", transform: "translateY(-50%)",
-            left: `${progress}%`, width: 10, height: 10, borderRadius: "50%",
-            background: "#a8ff00", marginLeft: -5, boxShadow: "0 0 6px #a8ff00"
-          }} />
+          <motion.div 
+            animate={{ width: `${progress}%` }}
+            transition={isDragging ? { type: "tween", duration: 0 } : { type: "tween", ease: "linear", duration: 0.2 }}
+            style={{
+              height: "100%", background: `linear-gradient(90deg, ${currentTrack.color}, #a8ff00)`,
+              borderRadius: 2, boxShadow: `0 0 8px ${currentTrack.color}`
+            }} 
+          />
+          <motion.div 
+            animate={{ left: `${progress}%` }}
+            transition={isDragging ? { type: "tween", duration: 0 } : { type: "tween", ease: "linear", duration: 0.2 }}
+            style={{
+              position: "absolute", top: "50%", transform: "translateY(-50%)",
+              width: 10, height: 10, borderRadius: "50%",
+              background: "#a8ff00", marginLeft: -5, boxShadow: "0 0 6px #a8ff00"
+            }} 
+          />
         </div>
         <div className="hidden sm:flex justify-between mt-1">
           <span style={{ fontSize: "0.65rem", color: "#444", fontFamily: "var(--font-barlow-condensed), sans-serif" }}>
