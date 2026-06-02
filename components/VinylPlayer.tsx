@@ -266,7 +266,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
             position: "relative", overflow: "hidden",
             background: "#050505",
             boxShadow: `0 0 0 2px #1a1a1a, inset 0 0 40px rgba(0,0,0,0.9)`,
-            display: "flex", alignItems: "center", justifycontent: "center"
+            display: "flex", alignItems: "center", justifyContent: "center"
           }}
         >
           <div ref={vinylRef} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", willChange: "transform" }}>
