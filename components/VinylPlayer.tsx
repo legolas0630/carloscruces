@@ -16,12 +16,15 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
   const vinylRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(true);
   const [isScratching, setIsScratching] = useState(false);
-  const lastX = useRef(0);
+  
+  // Positional and Vector references for accurate scratching mechanics
+  const centerCoords = useRef({ x: 0, y: 0 });
+  const lastAngle = useRef(0);
   const lastMoveTime = useRef(0);
   const dragDistance = useRef(0);
   const armWobble = useMotionValue(0);
 
-  // Detect screen size on mount to completely bypass 3D calculations on mobile
+  // Monitor device profile breakpoints safely
   useEffect(() => {
     const checkDevice = () => setIsMobile(window.innerWidth < 768);
     checkDevice();
@@ -29,23 +32,23 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     return () => window.removeEventListener("resize", checkDevice);
   }, []);
 
-  // 3D Tilt Logic
+  // 3D Perspective Tilt Mechanics
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
   const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [15, -15]), { stiffness: 150, damping: 20 });
   const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-15, 15]), { stiffness: 150, damping: 20 });
 
-  // Dynamic Light/Gloss Logic
+  // Light flare dynamic reflection parameters
   const glossRotate = useSpring(useTransform(x, [-0.5, 0.5], [-45, 45]), { stiffness: 150, damping: 20 });
   const glossOpacity = useSpring(useTransform(y, [-0.5, 0.5], [0.8, 0.4]), { stiffness: 150, damping: 20 });
 
-  // Arm parallax offsets
+  // Tone arm dynamic parallax depth offsets
   const armX = useSpring(useTransform(x, [-0.5, 0.5], [8, -8]), { stiffness: 150, damping: 20 });
   const armY = useSpring(useTransform(y, [-0.5, 0.5], [8, -8]), { stiffness: 150, damping: 20 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isMobile) return; // Stop layout calculations on touch screens
+    if (isMobile) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const xPct = (e.clientX - rect.left) / rect.width - 0.5;
     const yPct = (e.clientY - rect.top) / rect.height - 0.5;
@@ -58,64 +61,99 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     y.set(0);
   };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
+  // Helper calculation to determine touch vector angle relative to disc core center
+  const getAngle = (clientX: number, clientY: number) => {
+    const dx = clientX - centerCoords.current.x;
+    const dy = clientY - centerCoords.current.y;
+    return Math.atan2(dy, dx) * (180 / Math.PI);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
     setIsScratching(true);
     dragDistance.current = 0;
     lastMoveTime.current = performance.now();
-    lastX.current = e.clientX;
+
+    if (vinylRef.current) {
+      const rect = vinylRef.current.getBoundingClientRect();
+      centerCoords.current = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+      lastAngle.current = getAngle(e.clientX, e.clientY);
+    }
+    
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (isScratching) {
-      const now = performance.now();
-      const deltaTime = now - lastMoveTime.current;
-      const deltaX = e.clientX - lastX.current;
-      
-      // Map drag velocity to playback rate (px/ms scaled for feel)
-      const velocity = Math.abs(deltaX) / (deltaTime || 1);
-      const targetRate = Math.min(Math.max(0.1, velocity * 2.5), 4.0);
-      setRate(targetRate);
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScratching) {
+      handleMouseMove(e);
+      return;
+    }
 
-      // Map velocity to dynamic high-pass and distortion
-      const targetFreq = Math.min(20 + velocity * 1500, 4000);
-      const distortionAmount = Math.min(velocity * 0.4, 1.0);
-      const crackleIntensity = Math.min(0.2 + velocity * 0.5, 0.8);
+    e.preventDefault();
+    const now = performance.now();
+    const deltaTime = now - lastMoveTime.current;
+
+    // Standardize polar trajectory calculation across desktop, tablet, and mobile axes
+    const currentAngle = getAngle(e.clientX, e.clientY);
+    let deltaAngle = currentAngle - lastAngle.current;
+
+    // Handle rotational boundary constraints at the 180/-180 break threshold
+    if (deltaAngle > 180) deltaAngle -= 360;
+    if (deltaAngle < -180) deltaAngle += 360;
+
+    // Map gesture angular velocity parameters straight to the audio matrix pipeline
+    const velocity = Math.abs(deltaAngle) / (deltaTime || 1);
+    
+    // Scale rate manipulation curves based on scratch direction
+    const rateDirection = deltaAngle >= 0 ? 1 : -1;
+    const targetRate = Math.min(Math.max(-3.0, (velocity * 1.8) * rateDirection), 3.0);
+    
+    // Smooth out jitter configurations if pointer is moving slowly
+    if (Math.abs(deltaAngle) > 0.1) {
+      setRate(targetRate);
       
+      const targetFreq = Math.min(20 + velocity * 1200, 3500);
+      const distortionAmount = Math.min(velocity * 0.3, 0.8);
+      const crackleIntensity = Math.min(0.2 + velocity * 0.4, 0.7);
+
       setHighPass(targetFreq);
       setDistortion(distortionAmount);
       setCrackle(crackleIntensity);
+    }
 
-      dragDistance.current += Math.abs(deltaX);
-      // Map horizontal movement to rotation degrees (sensitivity 0.8)
-      rotation.current = (rotation.current + deltaX * 0.8) % 360;
-      lastX.current = e.clientX;
-      lastMoveTime.current = now;
+    dragDistance.current += Math.abs(deltaAngle);
+    rotation.current = (rotation.current + deltaAngle) % 360;
 
-      // Direct DOM manipulation for zero-lag tactile feel
-      if (vinylRef.current) {
-        vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
-      }
-    } else {
-      handleMouseMove(e as any);
+    lastAngle.current = currentAngle;
+    lastMoveTime.current = now;
+
+    // Render directly to DOM to bypass latency bottlenecks
+    if (vinylRef.current) {
+      vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
     }
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     setIsScratching(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+
+    // Smoothly restore defaults
     setRate(1.0);
     setHighPass(20);
     setDistortion(0);
     setCrackle(isPlaying ? 0.2 : 0);
-    // Spring-loaded wobble effect on the arm
-    animate(armWobble, [0, 8, -4, 2, 0], {
+
+    animate(armWobble, [0, 6, -3, 1, 0], {
       type: "spring",
-      stiffness: 300,
-      damping: 12
+      stiffness: 350,
+      damping: 10,
     });
   };
 
-  // Optimized Loop: Strictly starts and kills itself depending on playback state
+  // Continuous background canvas rendering loop
   useEffect(() => {
     if (!isPlaying || isScratching) {
       if (animRef.current) cancelAnimationFrame(animRef.current);
@@ -124,24 +162,22 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
 
     let lastTime = performance.now();
     
-    const animate = (time: number) => {
+    const animateLoop = (time: number) => {
       const delta = time - lastTime;
       lastTime = time;
 
-      // Calculate speed based on BPM (128 BPM is the baseline for 0.04 speed)
       const bpm = parseFloat(currentTrack.bpm) || 128;
       const speedFactor = bpm / 128;
       rotation.current = (rotation.current + delta * 0.04 * speedFactor) % 360;
 
-      // Direct DOM manipulation completely cuts out React re-render lags
       if (vinylRef.current) {
         vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
       }
 
-      animRef.current = requestAnimationFrame(animate);
+      animRef.current = requestAnimationFrame(animateLoop);
     };
 
-    animRef.current = requestAnimationFrame(animate);
+    animRef.current = requestAnimationFrame(animateLoop);
 
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
@@ -154,29 +190,31 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onMouseLeave={handleMouseLeave}
-      onClick={() => dragDistance.current < 5 && toggle()}
+      onClick={() => dragDistance.current < 8 && toggle()}
       style={{
         position: "relative", 
-        width: size * 1.2, 
+        width: isMobile ? size : size * 1.2, 
         height: size, 
-        cursor: "pointer",
+        cursor: "grab",
         perspective: 1000, 
         rotateX: isMobile ? 0 : rotateX,
         rotateY: isMobile ? 0 : rotateY,
-        rotate: armWobble, // Apply the wobble to the entire assembly perspective
+        rotate: armWobble, 
         transformStyle: "preserve-3d",
-        margin: "0 auto"
+        margin: "0 auto",
+        touchAction: "none", // Prevent native browser intercepts and layout page scrolls
+        userSelect: "none"
       }}
-      className="flex items-center justify-center"
+      className="flex items-center justify-center select-none"
     >
       {/* Record Sleeve */}
       <motion.div
         animate={{ 
-          x: isPlaying ? -size * 0.42 : -size * 0.1,
-          rotateY: isPlaying && !isMobile ? -15 : 0,
-          opacity: isPlaying ? 0.7 : 1
+          x: isPlaying ? -size * 0.35 : 0,
+          rotateY: isPlaying && !isMobile ? -12 : 0,
+          opacity: isPlaying && isMobile ? 0.4 : 1
         }}
-        transition={{ type: "spring", stiffness: 50, damping: 18 }}
+        transition={{ type: "spring", stiffness: 60, damping: 20 }}
         style={{
           width: size, height: size, background: "#111", borderRadius: 4,
           overflow: "hidden", boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
@@ -189,7 +227,8 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
           src={currentTrack.sleeveImg || currentTrack.img} 
           alt="Sleeve" 
           fill
-          className="object-cover opacity-80 saturate-[0.8] contrast-[1.1]"
+          priority
+          className="object-cover opacity-80 saturate-[0.8] contrast-[1.1] pointer-events-none"
         />
         <div style={{
           position: "absolute", inset: 0, 
@@ -204,35 +243,35 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
 
       {/* Disc & Arm Assembly */}
       <motion.div
-        initial={{ x: -size * 0.1 }}
-        animate={{ x: isPlaying ? size * 0.38 : size * 0.08 }}
-        transition={{ type: "spring", stiffness: 40, damping: 16 }}
+        initial={{ x: 0 }}
+        animate={{ x: isPlaying ? size * 0.32 : size * 0.05 }}
+        transition={{ type: "spring", stiffness: 50, damping: 18 }}
         style={{ position: "relative", width: size, height: size, zIndex: 5, transformStyle: "preserve-3d" }}
       >
-        {/* Background Glow */}
+        {/* Ambient Pulse Glow */}
         <motion.div
-          animate={{ opacity: isPlaying ? [0.4, 0.8, 0.4] : 0.2 }}
+          animate={{ opacity: isPlaying ? [0.3, 0.6, 0.3] : 0.1 }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           style={{
             position: "absolute", inset: -10, borderRadius: "50%",
-            boxShadow: `0 0 40px 10px ${currentTrack.color}33`,
+            boxShadow: `0 0 40px 10px ${currentTrack.color}22`,
             pointerEvents: "none"
           }}
         />
 
-        {/* Vinyl Disc */}
+        {/* Vinyl Disc Body */}
         <div
           style={{
             width: size, height: size, borderRadius: "50%",
             position: "relative", overflow: "hidden",
             background: "#050505",
             boxShadow: `0 0 0 2px #1a1a1a, inset 0 0 40px rgba(0,0,0,0.9)`,
-            display: "flex", alignItems: "center", justifyContent: "center"
+            display: "flex", alignItems: "center", justifycontent: "center"
           }}
         >
-          {/* We style transform directly via ref in loop, leaving standard style clean */}
-          <div ref={vinylRef} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Image src={currentTrack.img} alt={currentTrack.title} fill className="object-cover opacity-[0.85] rounded-full" />
+          <div ref={vinylRef} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", willChange: "transform" }}>
+            <Image src={currentTrack.img} alt={currentTrack.title} fill className="object-cover opacity-[0.85] rounded-full pointer-events-none" />
+            
             {/* Grooves */}
             <div style={{
               position: "absolute", inset: 0, borderRadius: "50%",
@@ -241,20 +280,20 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
             }} />
           </div>
 
-          {/* Dynamic Light/Gloss */}
+          {/* Dynamic Light/Gloss Overlay */}
           <motion.div 
             style={{
               position: "absolute", inset: 0, borderRadius: "50%",
               background: `conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.12) 10%, transparent 25%, transparent 45%, rgba(255,255,255,0.15) 50%, transparent 55%, transparent 80%, rgba(255,255,255,0.12) 90%, transparent 100%)`,
               pointerEvents: "none", zIndex: 1, mixBlendMode: "screen",
-              rotate: isMobile ? 0 : glossRotate, opacity: isMobile ? 0.6 : glossOpacity, translateZ: 10
+              rotate: isMobile ? 0 : glossRotate, opacity: isMobile ? 0.5 : glossOpacity, translateZ: 10
             }} 
           />
-          {/* Center Spindle */}
-          <div style={{ position: "absolute", width: size * 0.04, height: size * 0.04, borderRadius: "50%", background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "inset 0 0 8px rgba(0,0,0,1)", zIndex: 2 }} />
+          {/* Spindle Core */}
+          <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: size * 0.04, height: size * 0.04, borderRadius: "50%", background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "inset 0 0 8px rgba(0,0,0,1)", zIndex: 2 }} />
         </div>
 
-        {/* Tone Arm Assembly */}
+        {/* Mechanical Tone Arm */}
         <motion.div 
           style={{ 
             position: "absolute", top: 0, right: 0, width: "100%", height: "100%", 
@@ -293,18 +332,20 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
           </motion.div>
         </motion.div>
 
-        {/* Play Overlay */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileHover={isMobile ? { opacity: 0 } : { opacity: 1 }} // Hover features disabled for mobile screens
-          style={{
-            position: "absolute", inset: 0, borderRadius: "50%",
-            background: "rgba(0,0,0,0.5)",
-            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20
-          }}
-        >
-          <span style={{ fontSize: size * 0.18, color: "#a8ff00" }}>{isPlaying ? "⏸" : "▶"}</span>
-        </motion.div>
+        {/* Play State Overlay (Only shown on Desktop Hover) */}
+        {!isMobile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileHover={{ opacity: 1 }}
+            style={{
+              position: "absolute", inset: 0, borderRadius: "50%",
+              background: "rgba(0,0,0,0.5)",
+              display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20
+            }}
+          >
+            <span style={{ fontSize: size * 0.15, color: "#a8ff00" }}>{isPlaying ? "⏸" : "▶"}</span>
+          </motion.div>
+        )}
       </motion.div>
     </motion.div>
   );
