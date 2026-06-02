@@ -38,34 +38,28 @@ export interface Expedition {
 
 export const TRACKS: Track[] = [
   { 
-    id: 1, title: "SUBZERO-01", bpm: "148 BPM", duration: "7:23", color: "#a8ff00", 
-    img: "https://via.placeholder.com/300x300/0a0a0a/a8ff00?text=TECHNO", 
+    id: 1, title: "CUMBIA MALICE", bpm: "148 BPM", duration: "", color: "#a8ff00", 
+    img: "/artwork/cumbia-malice.jpeg", 
     desc: "Industrial kick patterns layered over frozen sub frequencies.", 
     src: "/beats/cumbia-malice.mp3", genre: "TECHNO", type: "Single" 
   },
   { 
-    id: 2, title: "CUMBIA MALICE", bpm: "105 BPM", duration: "6:47", color: "#00ffcc", 
-    img: "https://via.placeholder.com/300x300/0a0a0a/00ffcc?text=CUMBIA", 
+    id: 2, title: "CUMBIA MALICIA", bpm: "105 BPM", duration: "", color: "#00ffcc", 
+    img: "/artwork/cumbia-villera.jpeg", 
     desc: "Heavy bass meeting traditional rhythms.", 
     src: "/beats/cumbia-malicia.mp3", genre: "CUMBIA", type: "EP" 
   },
   { 
-    id: 3, title: "VOID DRIFT", bpm: "90 BPM", duration: "3:12", color: "#cc00ff", 
-    img: "https://via.placeholder.com/300x300/0a0a0a/cc00ff?text=RAP+BEAT", 
-    desc: "Lo-fi textures for late night sessions.", 
-    src: "/beats/asfalto.mp3", genre: "RAP BEATS", type: "Single" 
-  },
-  { 
-    id: 4, title: "ROOTS SIGNAL", bpm: "140 BPM", duration: "5:20", color: "#ff4400", 
-    img: "https://via.placeholder.com/300x300/0a0a0a/ff4400?text=DUB", 
-    desc: "Deep reverb and delay-heavy sound system pressure.", 
-    src: "/beats/cumbia-confessions.mp3", genre: "REGGAE DUB", type: "EP" 
-  },
-  { 
-    id: 5, title: "ASPHALT", bpm: "155 BPM", duration: "9:04", color: "#ffffff", 
-    img: "/artwork/asfalto.jpg", 
-    desc: "Machine-soul transmissions.", 
+    id: 3, title: "ASFALTO", bpm: "155 BPM", duration: "", color: "#ffffff", 
+    img: "/artwork/asfalto.JPG", 
+    desc: "Machine-soul transmissions filtered through industrial machinery.", 
     src: "/beats/asfalto.mp3", genre: "TECHNO", type: "Single" 
+  },
+  { 
+    id: 4, title: "CUMBIA CONFESSIONS", bpm: "140 BPM", duration: "", color: "#ff4400", 
+    img: "/artwork/cumbia-confessions.jpeg", 
+    desc: "chill ambient cumbia house for late night rides and early morning rituals.", 
+    src: "/beats/cumbia-confessions.mp3", genre: "Cumbia House", type: "Single" 
   }
 ];
 

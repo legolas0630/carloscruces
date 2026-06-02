@@ -32,6 +32,8 @@ export default function Nav() {
     { name: "VISUALS", href: "/visuals" },
     { name: "EXPEDITIONS", href: "/expeditions" },
     { name: "MERCH", href: "/merch" },
+    { name: "ACCOUNT", href: "/login" },
+    { name: "CART", href: "/cart" },
   ];
 
   const socials = [

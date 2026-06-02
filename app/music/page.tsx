@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlayer } from "@/lib/PlayerContext";
 import { TRACKS } from "@/lib/tracks";
@@ -8,10 +8,19 @@ import VinylPlayer from "@/components/VinylPlayer";
 import SectionHeader from "@/components/SectionHeader";
 
 export default function MusicPage() {
-  const { currentTrack, isPlaying, progress, play, toggle } = usePlayer();
+  const { currentTrack, isPlaying, progress, play, toggle, setProgress } = usePlayer();
   const [playerSize, setPlayerSize] = useState(300);
   const [activeType, setActiveType] = useState<'ALL' | 'EP' | 'Single'>('ALL');
   const [activeGenre, setActiveGenre] = useState('ALL');
+  const [durations, setDurations] = useState<Record<number, string>>({});
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const waveformRef = useRef<HTMLDivElement>(null);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const genres = ['ALL', ...Array.from(new Set(TRACKS.map(t => t.genre)))];
   const filteredTracks = TRACKS.filter(t => 
@@ -19,7 +28,45 @@ export default function MusicPage() {
     (activeGenre === 'ALL' || t.genre === activeGenre)
   );
 
+  const handleSeek = useCallback((clientX: number) => {
+    if (!waveformRef.current) return;
+    const rect = waveformRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const percentage = (x / rect.width) * 100;
+    setProgress(percentage);
+  }, [setProgress]);
+
   useEffect(() => {
+    if (!isScrubbing) return;
+
+    const onMouseMove = (e: MouseEvent) => handleSeek(e.clientX);
+    const onTouchMove = (e: TouchEvent) => handleSeek(e.touches[0].clientX);
+    const onStopScrubbing = () => setIsScrubbing(false);
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onStopScrubbing);
+    window.addEventListener("touchmove", onTouchMove);
+    window.addEventListener("touchend", onStopScrubbing);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onStopScrubbing);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onStopScrubbing);
+    };
+  }, [isScrubbing, handleSeek]);
+
+  useEffect(() => {
+    TRACKS.forEach((track) => {
+      const audio = new Audio(track.src);
+      audio.addEventListener("loadedmetadata", () => {
+        setDurations((prev) => ({
+          ...prev,
+          [track.id]: formatTime(audio.duration),
+        }));
+      });
+    });
+
     const handleResize = () => {
       // Use 240px for mobile, 280px for tablets, and 300px for desktop
       setPlayerSize(window.innerWidth < 480 ? 240 : window.innerWidth < 768 ? 280 : 300);
@@ -81,15 +128,41 @@ export default function MusicPage() {
               </motion.div>
             </AnimatePresence>
             {/* Waveform visualizer */}
-            <div style={{ width: "100%", height: 48, display: "flex", alignItems: "center", gap: 2 }}>
+            <div 
+              ref={waveformRef}
+              onMouseDown={(e) => { setIsScrubbing(true); handleSeek(e.clientX); }}
+              onTouchStart={(e) => { setIsScrubbing(true); handleSeek(e.touches[0].clientX); }}
+              style={{ 
+                width: "100%", height: 48, display: "flex", alignItems: "center", gap: 2, 
+                cursor: "pointer", touchAction: "none" 
+              }}
+            >
               {Array.from({ length: 60 }).map((_, i) => {
                 const filled = (i / 60) * 100 < progress;
                 return (
                   <motion.div
                     key={i}
-                    animate={{ height: isPlaying ? `${20 + Math.random() * 26}px` : `${8 + Math.sin(i * 0.5) * 10}px` }}
-                    transition={{ duration: 0.1, repeat: isPlaying ? Infinity : 0, repeatType: "mirror", delay: i * 0.01 }}
-                    style={{ flex: 1, background: filled ? currentTrack.color : "#1a1a1a", borderRadius: 1, minHeight: 2, boxShadow: filled ? `0 0 4px ${currentTrack.color}` : "none" }}
+                    animate={{ 
+                      height: (isPlaying || isScrubbing) ? `${20 + Math.random() * 26}px` : `${8 + Math.sin(i * 0.5) * 10}px`,
+                      opacity: isScrubbing ? [0.7, 1, 0.7] : 1,
+                      scaleY: isScrubbing ? [1, 1.1, 1] : 1
+                    }}
+                    transition={{ 
+                      height: { duration: 0.1, repeat: (isPlaying || isScrubbing) ? Infinity : 0, repeatType: "mirror", delay: i * 0.01 },
+                      opacity: { duration: 0.6, repeat: Infinity, ease: "easeInOut" },
+                      scaleY: { duration: 0.3, repeat: Infinity, ease: "easeInOut" }
+                    }}
+                    style={{ 
+                      flex: 1, 
+                      background: filled ? currentTrack.color : "#1a1a1a", 
+                      borderRadius: 1, 
+                      minHeight: 2, 
+                      boxShadow: filled 
+                        ? (isScrubbing 
+                            ? `0 0 15px ${currentTrack.color}, 0 0 30px ${currentTrack.color}66` 
+                            : `0 0 4px ${currentTrack.color}`) 
+                        : "none" 
+                    }}
                   />
                 );
               })}
@@ -140,7 +213,7 @@ export default function MusicPage() {
                     </div>
                   </div>
                   <div style={{ fontFamily: "var(--font-barlow-condensed), sans-serif", fontSize: "0.8rem", color: "#444" }}>
-                    {t.duration}
+                    {durations[t.id] || "..."}
                   </div>
                 </motion.div>
               );

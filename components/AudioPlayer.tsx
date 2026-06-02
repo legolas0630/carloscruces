@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePlayer } from "@/lib/PlayerContext";
 
@@ -16,9 +16,46 @@ function ControlBtn({ onClick, children }: { onClick: () => void; children: Reac
 }
 
 export default function AudioPlayer() {
-  const { currentTrack, isPlaying, progress, volume, setVolume, toggle, skip, setProgress } = usePlayer();
+  const { currentTrack, isPlaying, progress, duration, volume, setVolume, toggle, skip, setProgress } = usePlayer();
   const [showVolume, setShowVolume] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleSeek = useCallback((clientX: number) => {
+    if (!progressRef.current) return;
+    const rect = progressRef.current.getBoundingClientRect();
+    // Clamp the value between 0 and the bar width
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const percentage = (x / rect.width) * 100;
+    setProgress(percentage);
+  }, [setProgress]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onMouseMove = (e: MouseEvent) => handleSeek(e.clientX);
+    const onTouchMove = (e: TouchEvent) => handleSeek(e.touches[0].clientX);
+    const onStopDragging = () => setIsDragging(false);
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onStopDragging);
+    window.addEventListener("touchmove", onTouchMove);
+    window.addEventListener("touchend", onStopDragging);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onStopDragging);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onStopDragging);
+    };
+  }, [isDragging, handleSeek]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -36,11 +73,11 @@ export default function AudioPlayer() {
       initial={{ y: 100 }} animate={{ y: 0 }} transition={{ type: "spring", damping: 20 }}
       className="fixed bottom-0 left-0 right-0 z-[200] bg-[#0a0a0a]/95 border-t border-[#1a1a1a] backdrop-blur-xl flex items-center gap-3 sm:gap-6 px-4 sm:px-8 h-20 sm:h-[72px]"
     >
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 shrink-0 w-[9.5rem] sm:w-[14rem]">
         <div style={{ width: 40, height: 40, borderRadius: 4, overflow: "hidden", border: `1px solid ${currentTrack.color}44`, flexShrink: 0 }}>
         <img src={currentTrack.img} alt={currentTrack.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div style={{ fontFamily: "var(--font-barlow-condensed), sans-serif", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.1em", color: "#f0f0f0" }} className="truncate">
             {currentTrack.title}
           </div>
@@ -67,12 +104,37 @@ export default function AudioPlayer() {
         <ControlBtn onClick={() => skip(1)}>⏭</ControlBtn>
       </div>
 
-      <div className="flex-1 cursor-pointer min-w-[60px]"
-        onClick={e => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          setProgress(((e.clientX - rect.left) / rect.width) * 100);
+      <div 
+        ref={progressRef}
+        className="flex-1 cursor-pointer min-w-[60px] py-4 touch-none relative"
+        onMouseDown={e => {
+          setIsDragging(true);
+          handleSeek(e.clientX);
+        }}
+        onTouchStart={e => {
+          setIsDragging(true);
+          handleSeek(e.touches[0].clientX);
         }}
       >
+        <AnimatePresence>
+          {isDragging && (
+            <motion.div
+              initial={{ opacity: 0, y: 0, x: "-50%" }}
+              animate={{ opacity: 1, y: -10, x: "-50%" }}
+              exit={{ opacity: 0, y: 0, x: "-50%" }}
+              className="absolute bottom-full bg-[#111] border border-[#1a1a1a] px-2 py-1 rounded shadow-xl pointer-events-none"
+              style={{ left: `${progress}%`, zIndex: 210 }}
+            >
+              <span 
+                className="text-[0.7rem] font-bold text-[#a8ff00] whitespace-nowrap"
+                style={{ fontFamily: "var(--font-barlow-condensed), sans-serif" }}
+              >
+                {formatTime((progress / 100) * duration)}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div style={{ height: 3, background: "#1a1a1a", borderRadius: 2, position: "relative" }}>
           <motion.div style={{
             height: "100%", background: `linear-gradient(90deg, ${currentTrack.color}, #a8ff00)`,
@@ -86,12 +148,10 @@ export default function AudioPlayer() {
         </div>
         <div className="hidden sm:flex justify-between mt-1">
           <span style={{ fontSize: "0.65rem", color: "#444", fontFamily: "var(--font-barlow-condensed), sans-serif" }}>
-            {/* Displaying elapsed time based on progress and duration */}
-            {/* Note: This is an approximation since we don't have the exact duration in seconds readily available from TRACKS without parsing */}
-            {Math.floor(progress * 4.4 / 100)}:{String(Math.floor((progress * 4.4 / 100 % 1) * 60)).padStart(2, "0")}
+            {formatTime((progress / 100) * duration)}
           </span>
           <span style={{ fontSize: "0.65rem", color: "#444", fontFamily: "var(--font-barlow-condensed), sans-serif" }}>
-            {currentTrack.duration}
+            {formatTime(duration)}
           </span>
         </div>
       </div>
@@ -108,6 +168,8 @@ export default function AudioPlayer() {
         <div className="hidden sm:block ml-1">
           <input
             type="range" min="0" max="1" step="0.01" value={volume}
+            aria-label="Volume"
+            title="Volume"
             onChange={e => setVolume(Number(e.target.value))}
             style={{
               width: 80, accentColor: "#a8ff00", cursor: "pointer",
@@ -129,6 +191,8 @@ export default function AudioPlayer() {
             >
               <input
                 type="range" min="0" max="1" step="0.01" value={volume}
+                aria-label="Volume"
+                title="Volume"
                 onChange={e => setVolume(Number(e.target.value))}
                 style={{
                   width: 100, accentColor: "#a8ff00", cursor: "pointer",

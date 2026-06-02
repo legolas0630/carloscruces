@@ -1,13 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { Howl } from "howler";
 import { TRACKS, Track } from "./tracks";
 
 interface PlayerContextType {
   currentTrack: Track;
   isPlaying: boolean;
   progress: number;
+  duration: number;
   volume: number;
   setVolume: (v: number) => void;
   play: (track?: Track) => void;
@@ -23,18 +23,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [currentTrack, setCurrentTrack] = useState<Track>(TRACKS[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
 
-  const howlRef = useRef<Howl | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const requestRef = useRef<number | null>(null);
   const shouldAutoplayRef = useRef(false);
 
   const updateProgress = useCallback(() => {
-    if (howlRef.current && isPlaying) {
-      const seek = howlRef.current.seek() as number;
-      const duration = howlRef.current.duration();
-      if (duration > 0) {
-        setProgress((seek / duration) * 100);
+    if (audioRef.current && isPlaying) {
+      const currentTime = audioRef.current.currentTime;
+      const totalDuration = audioRef.current.duration;
+      if (totalDuration > 0) {
+        setProgress((currentTime / totalDuration) * 100);
       }
       requestRef.current = requestAnimationFrame(updateProgress);
     }
@@ -52,6 +53,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isPlaying, updateProgress]);
 
+  // Initialize audio element on mount
+  useEffect(() => {
+    audioRef.current = new Audio();
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
   const skip = useCallback((dir: number) => {
     const idx = TRACKS.findIndex((t) => t.id === currentTrack.id);
     const next = TRACKS[(idx + dir + TRACKS.length) % TRACKS.length];
@@ -60,47 +72,39 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setProgress(0);
   }, [currentTrack.id]);
 
-  const loadTrack = useCallback((track: Track) => {
-    if (howlRef.current) {
-      howlRef.current.unload();
-    }
-
-    const audioUrl = track.src;
-
-    howlRef.current = new Howl({
-      src: [audioUrl],
-      html5: true,
-      volume,
-      onplay: () => setIsPlaying(true),
-      onpause: () => setIsPlaying(false),
-      onstop: () => setIsPlaying(false),
-      onend: () => {
-        setIsPlaying(false);
-        setProgress(0);
-        shouldAutoplayRef.current = true;
-        skip(1);
-      }
-    });
-  }, [skip, volume]);
-
   useEffect(() => {
-    loadTrack(currentTrack);
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    if (shouldAutoplayRef.current && howlRef.current) {
+    const handleLoadedMetadata = () => setDuration(audio.duration);
+    const handleEnded = () => skip(1);
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+
+    audio.src = currentTrack.src;
+    audio.load();
+    audio.volume = volume;
+
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+
+    if (shouldAutoplayRef.current) {
+      audio.play().catch(err => console.log("Autoplay prevented:", err));
       shouldAutoplayRef.current = false;
-      howlRef.current.play();
-      setIsPlaying(true);
     }
 
     return () => {
-      if (howlRef.current) howlRef.current.unload();
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
     };
-  }, [currentTrack, loadTrack]);
+  }, [currentTrack, skip]);
 
   useEffect(() => {
-    if (howlRef.current) {
-      howlRef.current.volume(volume);
-    }
+    if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
 
   const play = useCallback((track?: Track) => {
@@ -110,17 +114,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (howlRef.current) {
-      howlRef.current.play();
-      setIsPlaying(true);
-    }
+    audioRef.current?.play().catch(err => console.log(err));
   }, [currentTrack.id]);
 
   const pause = useCallback(() => {
-    if (howlRef.current) {
-      howlRef.current.pause();
-      setIsPlaying(false);
-    }
+    audioRef.current?.pause();
   }, []);
 
   const toggle = useCallback(() => {
@@ -129,9 +127,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [isPlaying, pause, play]);
 
   const setManualProgress = useCallback((p: number) => {
-    if (howlRef.current) {
-      const duration = howlRef.current.duration();
-      howlRef.current.seek((p / 100) * duration);
+    if (audioRef.current && audioRef.current.duration > 0) {
+      audioRef.current.currentTime = (p / 100) * audioRef.current.duration;
       setProgress(p);
     }
   }, []);
@@ -142,6 +139,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         currentTrack,
         isPlaying,
         progress,
+        duration,
         volume,
         setVolume,
         play,
