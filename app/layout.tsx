@@ -10,7 +10,7 @@ import Providers from "@/components/Providers";
 import Nav from "@/components/Nav";
 import AudioPlayer from "@/components/AudioPlayer";
 import ParallaxBackground from "@/components/ParallaxBackground";
-import { CartProvider } from "@/context/CartContext";
+
 const barlow = Barlow({
   subsets: ["latin"],
   weight: ["300", "400"],
@@ -26,6 +26,12 @@ const barlowCondensed = Barlow_Condensed({
 export const metadata: Metadata = {
   title: "Carlos Cruces | ASCEND · DESCEND · TRANSCEND",
   description: "Official website of Carlos Cruces. Music, Visuals, Expeditions and Merch.",
+  manifest: "/manifest.json", // Tells mobile devices your PWA rules exist
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Cruces Music",
+  },
 };
 
 export default function RootLayout({

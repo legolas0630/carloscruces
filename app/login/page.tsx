@@ -51,7 +51,7 @@ export default function LoginPage() {
     <div className="min-h-screen py-24 px-4 sm:px-10 max-w-[1100px] mx-auto">
       <div className="max-w-2xl">
         {/* Adjusted to accept standard props matching your core framework structure */}
-        <SectionHeader title="LOGIN" subtitle="ACCESS · ACCOUNT · BOOKINGS" />
+        <SectionHeader label="LOGIN" sub="ACCESS · ACCOUNT · BOOKINGS" />
 
         <div className="mt-12 grid gap-6">
           

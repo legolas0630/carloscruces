@@ -74,7 +74,7 @@ export default function MerchPage() {
             </div>
             <motion.div 
               whileHover={{ scale: 1.02 }}
-              whileActive={{ scale: 0.98 }}
+              whileTap={{ scale: 0.98 }}
               className="px-5 py-2.5 bg-[#a8ff00] text-black font-bold text-[0.65rem] tracking-[0.2em] rounded-sm cursor-pointer shadow-[0_0_20px_rgba(168,255,0,0.15)] hover:shadow-[0_0_35px_rgba(168,255,0,0.4)] transition-all duration-300"
             >
               NOTIFY VIA COMM-LINK
