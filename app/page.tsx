@@ -19,15 +19,16 @@ export default function HomePage() {
   const { currentTrack, isPlaying } = usePlayer();
   const [playerSize, setPlayerSize] = useState(260);
 
+  // Added optional chaining safeguards to avoid runtime crashes during initial context hydration
   const grainDuration = React.useMemo(() => {
-    const bpm = parseFloat(currentTrack.bpm) || 120;
-    return (60 / bpm) / 4; // Sync to 1/4 beat for rhythmic high-frequency fuzz
-  }, [currentTrack.bpm]);
+    const bpm = parseFloat(currentTrack?.bpm) || 120;
+    return (60 / bpm) / 4; 
+  }, [currentTrack?.bpm]);
 
   const pulseDuration = React.useMemo(() => {
-    const bpm = parseFloat(currentTrack.bpm) || 120;
+    const bpm = parseFloat(currentTrack?.bpm) || 120;
     return 60 / bpm;
-  }, [currentTrack.bpm]);
+  }, [currentTrack?.bpm]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -39,7 +40,7 @@ export default function HomePage() {
   }, []);
 
   const links: LinkItem[] = [
-    { label: "MUSIC", sub: `${TRACKS.length} TRACKS · VIBES`, href: "/music", color: "#a8ff00" },
+    { label: "MUSIC", sub: `${TRACKS?.length || 0} TRACKS · VIBES`, href: "/music", color: "#a8ff00" },
     { label: "VISUALS", sub: "GRAPHIC DESIGN · ART DIRECTION", href: "https://xiwame.space", color: "#00ffcc", external: true },
     { label: "EXPEDITIONS", sub: "HIKING · MEDITATION · JOURNAL", href: "/expeditions", color: "#ff4400" },
     { label: "MERCH", sub: "GEAR · APPAREL · LIMITED DROPS", href: "/merch", color: "#cc00ff" },
@@ -136,12 +137,12 @@ export default function HomePage() {
           className="absolute inset-0 transition-all duration-1000" 
           style={{
             background: isPlaying 
-              ? `radial-gradient(circle at 50% 45%, ${currentTrack.color}15 0%, rgba(7,7,7,0.85) 85%)`
+              ? `radial-gradient(circle at 50% 45%, ${(currentTrack?.color || '#a8ff00')}15 0%, rgba(7,7,7,0.85) 85%)`
               : `radial-gradient(circle at 50% 45%, rgba(32,32,32,0.3) 0%, rgba(7,7,7,0.7) 85%)`
           }}
         />
 
-        {/* Base64-Encoded Static Grain Sheet (Renders with 100% reliability on all devices) */}
+        {/* Base64-Encoded Static Grain Sheet */}
         <div 
           className="absolute inset-0 animate-analog-fuzz transition-[animation-duration,opacity] duration-500" 
           style={{
@@ -160,7 +161,7 @@ export default function HomePage() {
         transition={{ duration: 1.2 }}
         className="text-center relative z-10 w-full"
       >
-        {/* Hero Title with Dual-State loops (Hyper glitch when active, breathing pulse when paused) */}
+        {/* Hero Title with Dual-State loops */}
         <div className="mb-2" style={{ lineHeight: 0.88, userSelect: "none" }}>
           <motion.div
             animate={{ 
@@ -195,7 +196,7 @@ export default function HomePage() {
                   ] 
             }}
             transition={{ 
-              duration: isPlaying ? grainDuration * 1.5 : 3, 
+              duration: isPlaying ? grainDuration : 3, 
               repeat: Infinity, 
               repeatType: "reverse",
               ease: "easeInOut"
@@ -223,127 +224,61 @@ export default function HomePage() {
         </div>
 
         <AnimatePresence mode="wait">
-          <motion.div
-            key={currentTrack.id}
-            initial={{ opacity: 0, y: 10 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            exit={{ opacity: 0, y: -10 }}
-            className="mb-14 select-none"
-          >
-            <div 
-              className="font-bold text-[1.4rem] tracking-[0.2em] uppercase transition-colors duration-300" 
-              style={{ 
-                color: currentTrack.color, 
-                fontFamily: "var(--font-barlow-condensed), sans-serif",
-                textShadow: "0 2px 10px rgba(0,0,0,0.95)"
-              }}
+          {currentTrack?.id && (
+            <motion.div
+              key={currentTrack.id}
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-8 select-none"
             >
-              {currentTrack.title}
-            </div>
-            <div 
-              className="font-light text-[0.8rem] text-gray-400 mt-1 tracking-[0.3em]" 
-              style={{ 
-                fontFamily: "var(--font-barlow-condensed), sans-serif",
-                textShadow: "0 1px 5px rgba(0,0,0,0.9)"
-              }}
-            >
-              {currentTrack.bpm}
-            </div>
-          </motion.div>
+              <div 
+                className="font-bold text-[1.4rem] tracking-[0.2em] uppercase transition-colors duration-300" 
+                style={{ 
+                  color: currentTrack.color, 
+                  fontFamily: "var(--font-barlow-condensed), sans-serif",
+                  textShadow: "0 2px 10px rgba(0,0,0,0.95)"
+                }}
+              >
+                {currentTrack.title}
+              </div>
+              <div 
+                className="font-light text-[0.8rem] text-gray-400 mt-1 tracking-[0.3em]" 
+                style={{ 
+                  fontFamily: "var(--font-barlow-condensed), sans-serif",
+                  textShadow: "0 1px 5px rgba(0,0,0,0.9)"
+                }}
+              >
+                {currentTrack.bpm}
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
 
-        {/* Main Hub Links with Isolated Glassmorphism Layers */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-[460px] w-full mx-auto px-4">
-          {links.map((l, i) => (
-            <Link 
-              key={l.href} 
-              href={l.href} 
-              target={l.external ? "_blank" : undefined}
-              rel={l.external ? "noopener noreferrer" : undefined}
-              className="no-underline block w-full"
-            >
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ 
-                  opacity: 1, 
-                  y: 0,
-                  borderColor: isPlaying ? `${currentTrack.color}33` : "rgba(255,255,255,0.05)",
-                  boxShadow: isPlaying 
-                    ? [
-                        `0 0 10px ${currentTrack.color}08`,
-                        `0 0 25px ${currentTrack.color}1A`,
-                        `0 0 10px ${currentTrack.color}08`
-                      ]
-                    : "0 0 0px transparent",
-                  scale: isPlaying ? [1, 1.02, 1] : 1
-                }}
-                transition={{ 
-                  opacity: { delay: 0.3 + i * 0.08, duration: 0.4 },
-                  y: { delay: 0.3 + i * 0.08, duration: 0.4 },
-                  boxShadow: { 
-                    duration: pulseDuration, 
-                    repeat: isPlaying ? Infinity : 0, 
-                    ease: "easeInOut" 
-                  },
-                  scale: { 
-                    duration: pulseDuration, 
-                    repeat: isPlaying ? Infinity : 0, 
-                    ease: "easeInOut" 
-                  }
-                }}
-                whileHover={{ 
-                  scale: 1.05, 
-                  borderColor: currentTrack.color, 
-                  boxShadow: `0 0 30px ${currentTrack.color}26`,
-                  backgroundColor: `${currentTrack.color}05`
-                }}
-                whileTap={{ scale: 0.98 }}
-                className="bg-[#0b0b0b]/92 border border-white/5 rounded-sm p-5 w-full text-left cursor-pointer group transition-colors duration-300 flex flex-col justify-center h-24"
-                style={{ backdropFilter: "blur(6px)" }} // Isolates text from static line distraction underneath
-              >
-                <div 
-                  className="font-bold text-[1.2rem] tracking-[0.15em] transition-colors duration-300"
-                  style={{ 
-                    color: isPlaying ? currentTrack.color : "#f0f0f0",
-                    fontFamily: "var(--font-barlow-condensed), sans-serif", 
-                    margin: 0 
-                  }}
-                >
-                  {l.label}
-                </div>
-                <div 
-                  className="font-light text-[0.65rem] text-gray-400 mt-1 tracking-[0.1em] uppercase group-hover:text-white transition-colors duration-200"
-                  style={{ fontFamily: "var(--font-barlow-condensed), sans-serif" }}
-                >
-                  {l.sub}
-                </div>
-              </motion.div>
-            </Link>
-          ))}
-        </div>
-
-        {/* High-Contrast Social Footer Links */}
-        <div className="flex flex-wrap gap-8 justify-center mt-16">
+        {/* ================= SOCIAL LINKS MATRIX: REPOSITIONED ABOVE THE GRID CARD SLOTS ================= */}
+        <div className="flex flex-wrap gap-7 justify-center items-center mb-10 mt-2 relative z-10 max-w-[460px] mx-auto">
           {socials.map((s, i) => (
             <motion.a 
               key={s.name} 
               href={s.href} 
+              target="_blank"
+              rel="noopener noreferrer"
               initial={{ opacity: 0, y: 10 }}
               animate={{ 
                 opacity: 1, 
                 y: 0,
-                filter: isPlaying 
+                filter: isPlaying && currentTrack 
                   ? [
                       `drop-shadow(0 0 2px ${currentTrack.color}44)`,
                       `drop-shadow(0 0 10px ${currentTrack.color}aa)`,
                       `drop-shadow(0 0 2px ${currentTrack.color}44)`
-                    ]
+                    ] 
                   : "drop-shadow(0 0 0px transparent)",
                 scale: isPlaying ? [1, 1.08, 1] : 1
               }}
               transition={{ 
-                opacity: { delay: 0.8 + i * 0.08, duration: 0.4 },
-                y: { delay: 0.8 + i * 0.08, duration: 0.4 },
+                opacity: { delay: 0.4 + i * 0.06, duration: 0.4 },
+                y: { delay: 0.4 + i * 0.06, duration: 0.4 },
                 filter: { 
                   duration: grainDuration, 
                   repeat: isPlaying ? Infinity : 0, 
@@ -361,19 +296,20 @@ export default function HomePage() {
                 textShadow: "0 2px 4px rgba(0,0,0,0.9)"
               }}
               whileHover={{ 
-                color: currentTrack.color,
-                filter: `drop-shadow(0 0 15px ${currentTrack.color})`,
+                color: currentTrack?.color || '#a8ff00',
+                filter: `drop-shadow(0 0 15px ${currentTrack?.color || '#a8ff00'})`,
                 scale: 1.2
               }}
               aria-label={s.name}
             >
-              {/* Tooltip Label */}
+              {/* High Contrast Tooltip Guard */}
               <span 
-                className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 border border-current text-[0.55rem] font-bold tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-20 rounded-sm translate-y-2 group-hover:translate-y-0"
+                className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-black/95 border text-[0.55rem] font-black tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-20 rounded-sm translate-y-2 group-hover:translate-y-0"
                 style={{ 
-                  color: currentTrack.color,
-                  borderColor: `${currentTrack.color}33`,
-                  boxShadow: `0 0 15px ${currentTrack.color}1A`
+                  color: currentTrack?.color || '#a8ff00',
+                  borderColor: currentTrack?.color ? `${currentTrack.color}33` : "rgba(255,255,255,0.1)",
+                  boxShadow: currentTrack?.color ? `0 0 15px ${currentTrack.color}1A` : "none",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.9)"
                 }}
               >
                 {s.name}
@@ -383,6 +319,79 @@ export default function HomePage() {
             </motion.a>
           ))}
         </div>
+        {/* ============================================================================================== */}
+
+        {/* Main Hub Links with Isolated Glassmorphism Layers */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-[460px] w-full mx-auto px-4 relative z-10">
+          {links.map((l, i) => (
+            <Link 
+              key={l.href} 
+              href={l.href} 
+              target={l.external ? "_blank" : undefined}
+              rel={l.external ? "noopener noreferrer" : undefined}
+              className="no-underline block w-full"
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: 0,
+                  borderColor: isPlaying && currentTrack ? `${currentTrack.color}33` : "rgba(255,255,255,0.05)",
+                  boxShadow: isPlaying && currentTrack 
+                    ? [
+                        `0 0 10px ${currentTrack.color}08`,
+                        `0 0 25px ${currentTrack.color}1A`,
+                        `0 0 10px ${currentTrack.color}08`
+                      ]
+                    : "0 0 0px transparent",
+                  scale: isPlaying ? [1, 1.015, 1] : 1
+                }}
+                transition={{ 
+                  opacity: { delay: 0.3 + i * 0.08, duration: 0.4 },
+                  y: { delay: 0.3 + i * 0.08, duration: 0.4 },
+                  boxShadow: { 
+                    duration: pulseDuration, 
+                    repeat: isPlaying ? Infinity : 0, 
+                    ease: "easeInOut" 
+                  },
+                  scale: { 
+                    duration: pulseDuration, 
+                    repeat: isPlaying ? Infinity : 0, 
+                    ease: "easeInOut" 
+                  }
+                }}
+                whileHover={{ 
+                  scale: 1.04, 
+                  borderColor: currentTrack?.color || '#a8ff00', 
+                  boxShadow: `0 0 30px ${currentTrack?.color || '#a8ff00'}26`,
+                  backgroundColor: currentTrack?.color ? `${currentTrack.color}05` : "rgba(255,255,255,0.02)"
+                }}
+                whileTap={{ scale: 0.98 }}
+                className="bg-[#0b0b0b]/92 border border-white/5 rounded-sm p-5 w-full text-left cursor-pointer group transition-colors duration-300 flex flex-col justify-center h-24"
+                style={{ backdropFilter: "blur(6px)" }}
+              >
+                <div 
+                  className="font-bold text-[1.2rem] tracking-[0.15em] transition-colors duration-300"
+                  style={{ 
+                    color: isPlaying && currentTrack ? currentTrack.color : "#f0f0f0",
+                    fontFamily: "var(--font-barlow-condensed), sans-serif", 
+                    margin: 0,
+                    textShadow: "0 1px 4px rgba(0,0,0,0.5)"
+                  }}
+                >
+                  {l.label}
+                </div>
+                <div 
+                  className="font-light text-[0.65rem] text-gray-400 mt-1 tracking-[0.1em] uppercase group-hover:text-white transition-colors duration-200"
+                  style={{ fontFamily: "var(--font-barlow-condensed), sans-serif" }}
+                >
+                  {l.sub}
+                </div>
+              </motion.div>
+            </Link>
+          ))}
+        </div>
+
       </motion.div>
     </div>
   );
