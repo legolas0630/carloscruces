@@ -20,7 +20,7 @@ export default function HomePage() {
   const { currentTrack, isPlaying, toggle } = usePlayer();
   const { t, locale } = useLanguage();
   const [playerSize, setPlayerSize] = useState(260);
-  const [isMobile, setIsMobile] = useState(false); // 🟢 Tracks mobile/touch profiles to bypass thermal bottlenecks
+  const [isMobile, setIsMobile] = useState(false); // Tracks mobile/touch profiles to bypass thermal bottlenecks
 
   // Safeguarded tempo parsing to drive the synchronization matrices
   const grainDuration = useMemo(() => {
@@ -149,7 +149,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 sm:px-8 relative overflow-hidden bg-transparent transform-gpu">
       
-      {/* ================= BULLETPROOF ANIMATED TV STATIC BACKGROUND ================= */}
+      {/* ================= BULLETPROOF HARDWARE-ACCELERATED ANIMATIONS ================= */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes analogFuzz {
           0% { background-position: 0px 0px; }
@@ -159,6 +159,29 @@ export default function HomePage() {
           80% { background-position: -15px -45px; }
           100% { background-position: 25px 25px; }
         }
+        
+        /* 🟢 Isolated native keyframes bypass React telemetry re-renders entirely */
+        @keyframes carlosGlitch {
+          0%, 100% { text-shadow: 0 0 10px #a8ff00, 2px 0 #00ffcc, -2px 0 #ff4400; }
+          50% { text-shadow: 0 0 20px #a8ff00, -1px 0 #cc00ff, 1px 0 #00ffcc; }
+        }
+        @keyframes crucesGlitch {
+          0%, 100% { text-shadow: 0 0 10px #a8ff00; }
+          50% { text-shadow: 0 0 25px #a8ff0088; }
+        }
+        @keyframes textAmbient {
+          0%, 100% { text-shadow: 0 0 15px rgba(168, 255, 0, 0.15), 0 2px 10px rgba(0,0,0,0.95); }
+          50% { text-shadow: 0 0 30px rgba(168, 255, 0, 0.45), 0 2px 10px rgba(0,0,0,0.95); }
+        }
+        @keyframes crucesAmbient {
+          0%, 100% { text-shadow: 0 2px 10px rgba(0,0,0,0.95), 0 0 0px rgba(255,255,255,0); }
+          50% { text-shadow: 0 2px 10px rgba(0,0,0,0.95), 0 0 15px rgba(255,255,255,0.08); }
+        }
+        @keyframes mobilePulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.85; }
+        }
+
         .animate-analog-fuzz {
           animation: analogFuzz 0.12s infinite steps(5);
         }
@@ -182,7 +205,6 @@ export default function HomePage() {
           style={{
             backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjM2MCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==")`,
             backgroundSize: "140px 140px",
-            // 🟢 Throttled redraw ticks on mobile prevent continuous painting calculation loops
             animationDuration: isPlaying ? (isMobile ? "0.4s" : `${grainDuration}s`) : (isMobile ? "0.8s" : "0.12s"),
             opacity: isPlaying ? (isMobile ? 0.06 : 0.12) : (isMobile ? 0.03 : 0.06),
           }} 
@@ -197,57 +219,35 @@ export default function HomePage() {
       >
         {/* Main Brand Title Frame */}
         <div className="mb-2" style={{ lineHeight: 0.88, userSelect: "none" }}>
-          <motion.div
-            animate={isMobile ? { opacity: isPlaying ? [1, 0.85, 1] : 1 } : { 
-              textShadow: isPlaying 
-                ? ["0 0 10px #a8ff00, 2px 0 #00ffcc, -2px 0 #ff4400", "0 0 20px #a8ff00, -1px 0 #cc00ff, 1px 0 #00ffcc", "0 0 10px #a8ff00"] 
-                : [
-                    "0 0 15px rgba(168, 255, 0, 0.15), 0 2px 10px rgba(0,0,0,0.95)", 
-                    "0 0 30px rgba(168, 255, 0, 0.45), 0 2px 10px rgba(0,0,0,0.95)", 
-                    "0 0 15px rgba(168, 255, 0, 0.15), 0 2px 10px rgba(0,0,0,0.95)"
-                  ] 
-            }}
-            transition={{ 
-              duration: isPlaying ? (isMobile ? 1.5 : grainDuration) : 2.5, 
-              repeat: Infinity, 
-              repeatType: isPlaying ? "reverse" : "mirror",
-              ease: isPlaying ? "linear" : "easeInOut"
-            }}
+          {/* 🟢 CARLOS: Executing via background CSS handles high-frequency rendering perfectly */}
+          <div
             className="font-black tracking-[0.05em] text-[#a8ff00] transform-gpu"
             style={{ 
               fontSize: "clamp(3.5rem, 11vw, 8rem)", 
               fontFamily: "var(--font-barlow-condensed), sans-serif",
-              textShadow: isMobile ? "0 2px 10px rgba(168, 255, 0, 0.4)" : undefined 
+              animation: isMobile 
+                ? (isPlaying ? "mobilePulse 1.5s infinite ease-in-out" : "none")
+                : (isPlaying ? `carlosGlitch ${grainDuration}s infinite linear` : "textAmbient 2.5s infinite ease-in-out"),
+              textShadow: isMobile ? "0 2px 10px rgba(168, 255, 0, 0.4)" : undefined
             }}
           >
             CARLOS
-          </motion.div>
+          </div>
           
-          <motion.div
-            animate={isMobile ? { opacity: 1 } : { 
-              textShadow: isPlaying 
-                ? ["0 0 10px #a8ff00", "0 0 25px #a8ff0088", "0 0 10px #a8ff00"] 
-                : [
-                    "0 2px 10px rgba(0,0,0,0.95), 0 0 0px rgba(255,255,255,0)", 
-                    "0 2px 10px rgba(0,0,0,0.95), 0 0 15px rgba(255,255,255,0.08)", 
-                    "0 2px 10px rgba(0,0,0,0.95), 0 0 0px rgba(255,255,255,0)"
-                  ] 
-            }}
-            transition={{ 
-              duration: isPlaying ? grainDuration : 3, 
-              repeat: Infinity, 
-              repeatType: "reverse",
-              ease: "easeInOut"
-            }}
+          {/* 🟢 CRUCES: Offloaded completely to hardware threads to avoid stalling */}
+          <div
             className="font-black tracking-[0.05em] text-[#f0f0f0] transform-gpu"
             style={{ 
               fontSize: "clamp(3.5rem, 11vw, 8rem)", 
               fontFamily: "var(--font-barlow-condensed), sans-serif",
+              animation: isMobile 
+                ? "none"
+                : (isPlaying ? `crucesGlitch ${grainDuration}s infinite linear` : "crucesAmbient 3s infinite ease-in-out"),
               textShadow: isMobile ? "0 2px 10px rgba(0,0,0,0.95)" : undefined
             }}
           >
             CRUCES
-          </motion.div>
+          </div>
         </div>
 
         {/* Localized Subtitle Hook */}
@@ -308,7 +308,6 @@ export default function HomePage() {
               animate={{ 
                 opacity: 1, 
                 y: 0,
-                // 🟢 Bypasses expensive drop-shadow computations frames completely on handheld screens
                 filter: !isMobile && isPlaying && currentTrack 
                   ? [
                       `drop-shadow(0 0 2px ${currentTrack.color}44)`,
@@ -374,7 +373,6 @@ export default function HomePage() {
                   opacity: 1, 
                   y: 0,
                   borderColor: isPlaying && currentTrack ? `${currentTrack.color}33` : "rgba(255,255,255,0.05)",
-                  // 🟢 Flattens infinite box-shadow blending loops down on mobile chips to avoid thermals
                   boxShadow: !isMobile && isPlaying && currentTrack 
                     ? [
                         `0 0 10px ${currentTrack.color}08`,
