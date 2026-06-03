@@ -17,7 +17,9 @@ export default function Nav() {
   const pathname = usePathname();
   const { isPlaying, currentTrack } = usePlayer();
   const { t, locale } = useLanguage();
+  
   const navRef = useRef<HTMLElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null); // 🟢 Anchors mobile drawer panel canvas to handle target selections safely
 
   // Deep, steady sound system pulse rate (equivalent to a grounded 120 BPM cadence)
   const pulseDuration = 0.5;
@@ -46,15 +48,29 @@ export default function Nav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Dismiss Drawer on Outside Click
+  // 🟢 Optimized Boundary Interceptor: Monitors click/touch tokens across both interface references
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isOpen && navRef.current && !navRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (!isOpen) return;
+
+      const targetElement = event.target as Node;
+      
+      const isClickInsideNav = navRef.current?.contains(targetElement);
+      const isClickInsideDrawer = drawerRef.current?.contains(targetElement);
+
+      // Only close if user purposefully clicks completely away from both navigation panels
+      if (!isClickInsideNav && !isClickInsideDrawer) {
         setIsOpen(false);
       }
     };
-    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside); // Native mobile pointer response
+    
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, [isOpen]);
 
   // Dynamic Navigation Engine Schema — Recalculates securely on user variations
@@ -211,7 +227,8 @@ export default function Nav() {
           <button
             type="button"
             onClick={() => setIsOpen(true)}
-            className="sm:hidden z-[110] text-[#f0f0f0] bg-transparent border-none cursor-pointer focus:outline-none text-2xl flex items-center justify-center p-1"
+            className="sm:hidden z-[110] text-[#f0f0f0] bg-transparent border-none cursor-pointer focus:outline-none text-2xl flex items-center justify-center p-1 animate-none transform-gpu"
+            aria-label="Open Navigation Drawer"
           >
             <div className="flex flex-col gap-1.5 w-6">
               <span className="w-full h-0.5 bg-[#f0f0f0]"></span>
@@ -225,36 +242,39 @@ export default function Nav() {
       <AnimatePresence>
         {isOpen && (
           <>
+            {/* Ambient Background Overlay Mask */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black/65 backdrop-blur-xl z-[101] sm:hidden"
+              className="fixed inset-0 bg-black/60 z-[101] sm:hidden"
             />
 
+            {/* 🟢 Mobile Content Drawer Panel Card */}
             <motion.div
+              ref={drawerRef}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "tween", duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed top-0 right-0 h-screen w-screen max-w-full bg-transparent flex flex-col justify-between pt-28 pb-24 px-10 sm:hidden z-[105] overflow-y-auto"
+              transition={{ type: "tween", duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
+              className="fixed top-0 right-0 h-screen w-[85vw] max-w-sm bg-[#0a0a0a]/95 border-l border-white/5 flex flex-col justify-between pt-28 pb-24 px-8 sm:hidden z-[105] overflow-y-auto backdrop-blur-xl transform-gpu"
             >
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="absolute top-6 right-6 text-zinc-500 hover:text-[#a8ff00] transition-colors duration-200 bg-transparent border-none cursor-pointer focus:outline-none text-2xl z-[115]"
+                className="absolute top-6 right-6 text-zinc-500 hover:text-[#a8ff00] transition-colors duration-200 bg-transparent border-none cursor-pointer focus:outline-none text-xl z-[115]"
               >
                 ✕
               </button>
 
-              <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_80%_20%,#a8ff0015,transparent_50%)]" />
+              <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_80%_20%,#a8ff0015,transparent_50%)]" />
               
               {/* Vertical Navigation System */}
               <div className="flex flex-col items-start gap-4 w-full relative z-10">
-                <div className="flex items-center justify-between w-full border-b border-white/5 pb-2 mb-2 select-none">
-                  <div className="text-[0.6rem] tracking-[0.4em] text-zinc-700 font-bold">INDEX</div>
-                  <div className="scale-90 origin-right">
+                <div className="flex items-center justify-between w-full border-b border-white/5 pb-3 mb-2 select-none">
+                  <div className="text-[0.6rem] tracking-[0.4em] text-zinc-600 font-bold font-mono">INDEX //</div>
+                  <div className="scale-95 origin-right relative z-[120]">
                     <LanguageSelector />
                   </div>
                 </div>
@@ -265,20 +285,20 @@ export default function Nav() {
                     <motion.button
                       type="button"
                       onClick={() => setIsOpen(false)}
-                      initial={{ opacity: 0, x: 20 }}
+                      initial={{ opacity: 0, x: 15 }}
                       animate={{ 
                         opacity: 1, 
                         x: 0,
                         textShadow: isActive 
-                          ? [`0 0 12px ${(currentTrack?.color || '#a8ff00')}33`, `0 0 25px ${(currentTrack?.color || '#a8ff00')}`, `0 0 12px ${(currentTrack?.color || '#a8ff00')}33`] 
+                          ? [`0 0 12px ${(currentTrack?.color || '#a8ff00')}22`, `0 0 25px ${(currentTrack?.color || '#a8ff00')}`, `0 0 12px ${(currentTrack?.color || '#a8ff00')}22`] 
                           : "0 0 0px rgba(0,0,0,0)"
                       }}
                       transition={{ 
-                        opacity: { delay: 0.05 + i * 0.04 },
-                        x: { delay: 0.05 + i * 0.04 },
+                        opacity: { delay: 0.04 + i * 0.03 },
+                        x: { delay: 0.04 + i * 0.03 },
                         textShadow: isActive ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : { duration: 0.2 }
                       }}
-                      className={`bg-transparent border-none cursor-pointer font-barlow-condensed tracking-[0.12em] text-left p-0 text-4xl uppercase ${
+                      className={`bg-transparent border-none cursor-pointer font-barlow-condensed tracking-[0.12em] text-left p-0 text-3xl uppercase transform-gpu ${
                         isActive ? "text-[#a8ff00] font-black" : "text-[#f0f0f0] font-bold"
                       }`}
                     >
@@ -287,11 +307,11 @@ export default function Nav() {
                   );
 
                   return link.external ? (
-                    <a key={link.name} href={link.href} target="_blank" rel="noopener noreferrer" className="no-underline w-full">
+                    <a key={link.name} href={link.href} target="_blank" rel="noopener noreferrer" className="no-underline w-full block py-1">
                       {mobileButton}
                     </a>
                   ) : (
-                    <Link key={link.name} href={link.href} className="no-underline w-full">
+                    <Link key={link.name} href={link.href} className="no-underline w-full block py-1">
                       {mobileButton}
                     </Link>
                   );
@@ -299,7 +319,7 @@ export default function Nav() {
               </div>
 
               {/* Synchronized Mobile Social Matrix */}
-              <div className="flex flex-wrap items-center gap-6 border-t border-white/5 pt-6 pb-4 relative z-10 w-full justify-start pl-1 mb-2">
+              <div className="flex flex-wrap items-center gap-6 border-t border-white/5 pt-6 pb-2 relative z-10 w-full justify-start pl-1 transform-gpu">
                 {socials.map((social, j) => (
                   <motion.a
                     key={social.name}
@@ -307,27 +327,18 @@ export default function Nav() {
                     target="_blank" 
                     rel="noopener noreferrer" 
                     aria-label={social.name}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ 
                       opacity: 1, 
                       y: 0,
-                      filter: isPlaying && currentTrack 
-                        ? [
-                            `drop-shadow(0 0 2px ${currentTrack.color}22)`,
-                            `drop-shadow(0 0 8px ${currentTrack.color}aa)`,
-                            `drop-shadow(0 0 2px ${currentTrack.color}22)`
-                          ]
-                        : "drop-shadow(0 0 0px transparent)",
-                      scale: isPlaying ? [1, 1.1, 1] : 1
+                      scale: isPlaying ? [1, 1.05, 1] : 1
                     }}
                     transition={{
-                      opacity: { delay: 0.2 + j * 0.04, duration: 0.3 },
-                      y: { delay: 0.2 + j * 0.04, duration: 0.3 },
-                      filter: { duration: pulseDuration * 2, repeat: isPlaying ? Infinity : 0, ease: "linear" },
+                      opacity: { delay: 0.15 + j * 0.03, duration: 0.3 },
+                      y: { delay: 0.15 + j * 0.03, duration: 0.3 },
                       scale: { duration: pulseDuration, repeat: isPlaying ? Infinity : 0, ease: "easeInOut" }
                     }}
-                    whileHover={{ color: currentTrack?.color || '#a8ff00', scale: 1.2 }}
-                    className="text-gray-400 hover:text-[#a8ff00] transition-colors duration-200"
+                    className="text-zinc-500 hover:text-[#a8ff00] transition-colors duration-200 transform-gpu"
                   >
                     {social.icon}
                   </motion.a>

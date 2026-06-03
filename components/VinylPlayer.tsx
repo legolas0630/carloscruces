@@ -373,7 +373,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
               width: size * 0.07, height: size * 0.14,
               background: "#111", borderRadius: "2px 2px 6px 6px",
               border: "1px solid #333", transform: "rotate(-12deg)",
-              display: "flex", alignItems: "flex-end", justifycontent: "center", paddingBottom: 6
+              display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 6
             }}>
                <div style={{ width: 2, height: 6, background: currentTrack?.color || '#a8ff00', boxShadow: `0 0 8px ${currentTrack?.color || '#a8ff00'}`, opacity: isPlaying ? 0.8 : 0, transition: "opacity 0.5s" }} />
             </div>
@@ -388,7 +388,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
             style={{
               position: "absolute", inset: 0, borderRadius: "50%",
               background: "rgba(0,0,0,0.5)",
-              display: "flex", alignItems: "center", justifycontent: "center", zIndex: 20
+              display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20
             }}
           >
             <span style={{ fontSize: size * 0.15, color: "#a8ff00" }}>{isPlaying ? "⏸" : "▶"}</span>
