@@ -14,7 +14,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
   const rotation = useRef(0);
   const animRef = useRef<number | null>(null);
   const vinylRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [isScratching, setIsScratching] = useState(false);
   
   // Positional and Vector references for accurate scratching mechanics
@@ -68,8 +68,28 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     return Math.atan2(dy, dx) * (180 / Math.PI);
   };
 
+  // 🟢 Thermal optimization utility: Extracts current rotation angle out of CSS matrix tracking layers
+  const getComputedRotation = (el: HTMLDivElement) => {
+    const style = window.getComputedStyle(el, null);
+    const transform = style.getPropertyValue("-webkit-transform") || style.getPropertyValue("transform");
+    if (transform && transform !== "none") {
+      const values = transform.split("(")[1].split(")")[0].split(",");
+      const a = parseFloat(values[0]);
+      const b = parseFloat(values[1]);
+      return Math.atan2(b, a) * (180 / Math.PI);
+    }
+    return rotation.current;
+  };
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
+    
+    // Catch active angle state from the native CSS layout thread before pausing it
+    if (isMobile && vinylRef.current) {
+      rotation.current = getComputedRotation(vinylRef.current);
+      vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
+    }
+
     setIsScratching(true);
     dragDistance.current = 0;
     lastMoveTime.current = performance.now();
@@ -155,7 +175,8 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
 
   // Continuous background canvas rendering loop — Zero BPM Tech footprint
   useEffect(() => {
-    if (!isPlaying || isScratching) {
+    // 🟢 Dynamic Bypass: If on mobile, offload regular spin animations entirely to native CSS loops
+    if (isMobile || !isPlaying || isScratching) {
       if (animRef.current) cancelAnimationFrame(animRef.current);
       return;
     }
@@ -181,7 +202,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [isPlaying, isScratching]);
+  }, [isPlaying, isScratching, isMobile]);
 
   return (
     <motion.div
@@ -204,8 +225,19 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
         touchAction: "none", 
         userSelect: "none"
       }}
-      className="flex items-center justify-center select-none"
+      className="flex items-center justify-center select-none transform-gpu"
     >
+      {/* 🟢 Mobile CSS Animation Injection Anchor */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes mobileVinylSpin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-mobile-vinyl {
+          animation: mobileVinylSpin 15s linear infinite;
+        }
+      `}} />
+
       {/* Record Sleeve */}
       <motion.div
         animate={{ 
@@ -221,6 +253,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
           transformStyle: "preserve-3d", translateZ: isMobile ? 0 : 40,
           border: "1px solid #222"
         }}
+        className="transform-gpu"
       >
         {currentTrack?.img && (
           <Image 
@@ -248,16 +281,18 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
         animate={{ x: isPlaying ? size * 0.32 : size * 0.05 }}
         transition={{ type: "spring", stiffness: 50, damping: 18 }}
         style={{ position: "relative", width: size, height: size, zIndex: 5, transformStyle: "preserve-3d" }}
+        className="transform-gpu"
       >
         {/* Ambient Pulse Glow */}
         <motion.div
-          animate={{ opacity: isPlaying ? [0.3, 0.6, 0.3] : 0.1 }}
+          animate={isMobile ? { opacity: isPlaying ? 0.4 : 0.1 } : { opacity: isPlaying ? [0.3, 0.6, 0.3] : 0.1 }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           style={{
             position: "absolute", inset: -10, borderRadius: "50%",
             boxShadow: `0 0 40px 10px ${currentTrack?.color || '#a8ff00'}22`,
             pointerEvents: "none"
           }}
+          className="transform-gpu"
         />
 
         {/* Vinyl Disc Body */}
@@ -269,8 +304,15 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
             boxShadow: `0 0 0 2px #1a1a1a, inset 0 0 40px rgba(0,0,0,0.9)`,
             display: "flex", alignItems: "center", justifyContent: "center"
           }}
+          className="transform-gpu"
         >
-          <div ref={vinylRef} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", willChange: "transform" }}>
+          {/* 🟢 Appends the hardware CSS spin animation directly on mobile during regular tracks streaming */}
+          <div 
+            ref={vinylRef} 
+            className={`position-absolute inset-0 flex items-center justify-center will-change-transform transform-gpu ${
+              isMobile && isPlaying && !isScratching ? "animate-mobile-vinyl" : ""
+            }`}
+          >
             {currentTrack?.img && (
               <Image src={currentTrack.img} alt={currentTrack?.title || "Vinyl"} fill className="object-cover opacity-[0.85] rounded-full pointer-events-none" />
             )}
@@ -291,6 +333,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
               pointerEvents: "none", zIndex: 1, mixBlendMode: "screen",
               rotate: isMobile ? 0 : glossRotate, opacity: isMobile ? 0.5 : glossOpacity, translateZ: 10
             }} 
+            className="transform-gpu"
           />
           {/* Spindle Core */}
           <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: size * 0.04, height: size * 0.04, borderRadius: "50%", background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "inset 0 0 8px rgba(0,0,0,1)", zIndex: 2 }} />
@@ -305,6 +348,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
             translateZ: isMobile ? 0 : 80,
             transformStyle: "preserve-3d"
           }}
+          className="transform-gpu"
         >
           <div style={{
             position: "absolute", top: size * 0.02, right: size * 0.02,
@@ -322,13 +366,14 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
               transformOrigin: "top center", borderRadius: 4,
               boxShadow: "4px 4px 15px rgba(0,0,0,0.5)"
             }}
+            className="transform-gpu"
           >
             <div style={{
               position: "absolute", bottom: -2, left: "-150%",
               width: size * 0.07, height: size * 0.14,
               background: "#111", borderRadius: "2px 2px 6px 6px",
               border: "1px solid #333", transform: "rotate(-12deg)",
-              display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 6
+              display: "flex", alignItems: "flex-end", justifycontent: "center", paddingBottom: 6
             }}>
                <div style={{ width: 2, height: 6, background: currentTrack?.color || '#a8ff00', boxShadow: `0 0 8px ${currentTrack?.color || '#a8ff00'}`, opacity: isPlaying ? 0.8 : 0, transition: "opacity 0.5s" }} />
             </div>
@@ -343,7 +388,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
             style={{
               position: "absolute", inset: 0, borderRadius: "50%",
               background: "rgba(0,0,0,0.5)",
-              display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20
+              display: "flex", alignItems: "center", justifycontent: "center", zIndex: 20
             }}
           >
             <span style={{ fontSize: size * 0.15, color: "#a8ff00" }}>{isPlaying ? "⏸" : "▶"}</span>

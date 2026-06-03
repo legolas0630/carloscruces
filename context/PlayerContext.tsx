@@ -46,10 +46,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         try {
           const parsed = JSON.parse(saved);
           const matched = TRACKS.find(t => t.id === parsed.id);
-          if (matched) setCurrentTrack(matched);
+          if (matched) {
+            setCurrentTrack(matched);
+            // Sync initial background reference state
+            if (audioRef.current) {
+              audioRef.current.src = matched.src;
+            }
+          }
         } catch (e) {
           console.error("Failed to parse cached audio token structures:", e);
         }
+      } else if (TRACKS.length > 0 && audioRef.current) {
+        audioRef.current.src = TRACKS[0].src;
       }
     }
   }, []);
@@ -61,7 +69,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentTrack]);
 
-  // 3. Lazy Initialization for Web Audio API Matrix Controls
+  // 3. Lazy Optimization for Web Audio API Matrix Controls
   const initAudioEngine = useCallback(() => {
     if (audioCtxRef.current || !audioRef.current) return;
 
@@ -81,14 +89,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     waveShaper.curve = null;
     distortionRef.current = waveShaper;
 
+    // Separate parallel FX gain loop interceptor node path
     const crackleNode = ctx.createGain();
     crackleNode.gain.value = 0;
     crackleGainRef.current = crackleNode;
 
-    // Direct wiring sequence paths
+    // Refactored direct wiring path prevents accidental zero-multiplier master mutes
     source.connect(highPassFilter);
     highPassFilter.connect(waveShaper);
-    waveShaper.connect(crackleNode);
+    waveShaper.connect(ctx.destination); // Direct stream tracking to main mix destination
+    
+    // Crackle effect sidechain line configuration link 
     crackleNode.connect(ctx.destination);
   }, []);
 
@@ -99,20 +110,22 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audioCtxRef.current.resume();
     }
 
-    if (track) {
-      setCurrentTrack(track);
-      if (audioRef.current) {
+    if (audioRef.current) {
+      if (track) {
+        setCurrentTrack(track);
         audioRef.current.src = track.src;
         audioRef.current.load();
+      } else if (!audioRef.current.src || audioRef.current.src === window.location.href) {
+        // Fallback to memory configuration state if element has no active stream bounds
+        audioRef.current.src = currentTrack.src;
+        audioRef.current.load();
       }
-    }
 
-    setTimeout(() => {
-      audioRef.current?.play()
+      audioRef.current.play()
         .then(() => setIsPlaying(true))
         .catch(err => console.warn("Playback initialization blocked by client security flags:", err));
-    }, 50);
-  }, [initAudioEngine]);
+    }
+  }, [initAudioEngine, currentTrack]);
 
   const pause = useCallback(() => {
     audioRef.current?.pause();
@@ -219,14 +232,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
       
-      {/* Hidden native interface deck rendering pipeline */}
+      {/* 🟢 Omit the src attribute template here so React never over-writes stream data upon render cycles */}
       <audio
         ref={audioRef}
-        src={currentTrack?.src}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleTrackEnded}
         preload="metadata"
+        crossOrigin="anonymous"
       />
     </PlayerContext.Provider>
   );

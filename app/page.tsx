@@ -16,9 +16,11 @@ interface LinkItem {
 }
 
 export default function HomePage() {
-  const { currentTrack, isPlaying } = usePlayer();
+  // Destructure the optimized toggle action from our unified audio context
+  const { currentTrack, isPlaying, toggle } = usePlayer();
   const { t, locale } = useLanguage();
   const [playerSize, setPlayerSize] = useState(260);
+  const [isMobile, setIsMobile] = useState(false); // 🟢 Tracks mobile/touch profiles to bypass thermal bottlenecks
 
   // Safeguarded tempo parsing to drive the synchronization matrices
   const grainDuration = useMemo(() => {
@@ -31,12 +33,23 @@ export default function HomePage() {
 
   useEffect(() => {
     const handleResize = () => {
-      setPlayerSize(window.innerWidth < 480 ? 200 : 260);
+      const width = window.innerWidth;
+      setPlayerSize(width < 480 ? 200 : 260);
+      
+      // Classify mobile performance layout rules via width or hardware touch pointers
+      const mobileQuery = window.matchMedia("(pointer: coarse)").matches || width < 768;
+      setIsMobile(mobileQuery);
     };
+    
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Optimized Playback Engine Interceptor
+  const handleVinylClick = () => {
+    toggle();
+  };
 
   // Reactive layout grid - hot-swaps language text streams instantly upon language toggle
   const links: LinkItem[] = useMemo(() => [
@@ -134,7 +147,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 sm:px-8 relative overflow-hidden bg-transparent">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 sm:px-8 relative overflow-hidden bg-transparent transform-gpu">
       
       {/* ================= BULLETPROOF ANIMATED TV STATIC BACKGROUND ================= */}
       <style dangerouslySetInnerHTML={{ __html: `
@@ -169,8 +182,9 @@ export default function HomePage() {
           style={{
             backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjM2MCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==")`,
             backgroundSize: "140px 140px",
-            animationDuration: isPlaying ? `${grainDuration}s` : "0.12s",
-            opacity: isPlaying ? 0.12 : 0.06,
+            // 🟢 Throttled redraw ticks on mobile prevent continuous painting calculation loops
+            animationDuration: isPlaying ? (isMobile ? "0.4s" : `${grainDuration}s`) : (isMobile ? "0.8s" : "0.12s"),
+            opacity: isPlaying ? (isMobile ? 0.06 : 0.12) : (isMobile ? 0.03 : 0.06),
           }} 
         />
       </div>
@@ -179,12 +193,12 @@ export default function HomePage() {
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
         transition={{ duration: 1.2 }}
-        className="text-center relative z-10 w-full"
+        className="text-center relative z-10 w-full will-change-transform"
       >
         {/* Main Brand Title Frame */}
         <div className="mb-2" style={{ lineHeight: 0.88, userSelect: "none" }}>
           <motion.div
-            animate={{ 
+            animate={isMobile ? { opacity: isPlaying ? [1, 0.85, 1] : 1 } : { 
               textShadow: isPlaying 
                 ? ["0 0 10px #a8ff00, 2px 0 #00ffcc, -2px 0 #ff4400", "0 0 20px #a8ff00, -1px 0 #cc00ff, 1px 0 #00ffcc", "0 0 10px #a8ff00"] 
                 : [
@@ -194,19 +208,23 @@ export default function HomePage() {
                   ] 
             }}
             transition={{ 
-              duration: isPlaying ? grainDuration : 2.5, 
+              duration: isPlaying ? (isMobile ? 1.5 : grainDuration) : 2.5, 
               repeat: Infinity, 
               repeatType: isPlaying ? "reverse" : "mirror",
               ease: isPlaying ? "linear" : "easeInOut"
             }}
-            className="font-black tracking-[0.05em] text-[#a8ff00]"
-            style={{ fontSize: "clamp(3.5rem, 11vw, 8rem)", fontFamily: "var(--font-barlow-condensed), sans-serif" }}
+            className="font-black tracking-[0.05em] text-[#a8ff00] transform-gpu"
+            style={{ 
+              fontSize: "clamp(3.5rem, 11vw, 8rem)", 
+              fontFamily: "var(--font-barlow-condensed), sans-serif",
+              textShadow: isMobile ? "0 2px 10px rgba(168, 255, 0, 0.4)" : undefined 
+            }}
           >
             CARLOS
           </motion.div>
           
           <motion.div
-            animate={{ 
+            animate={isMobile ? { opacity: 1 } : { 
               textShadow: isPlaying 
                 ? ["0 0 10px #a8ff00", "0 0 25px #a8ff0088", "0 0 10px #a8ff00"] 
                 : [
@@ -221,8 +239,12 @@ export default function HomePage() {
               repeatType: "reverse",
               ease: "easeInOut"
             }}
-            className="font-black tracking-[0.05em] text-[#f0f0f0]"
-            style={{ fontSize: "clamp(3.5rem, 11vw, 8rem)", fontFamily: "var(--font-barlow-condensed), sans-serif" }}
+            className="font-black tracking-[0.05em] text-[#f0f0f0] transform-gpu"
+            style={{ 
+              fontSize: "clamp(3.5rem, 11vw, 8rem)", 
+              fontFamily: "var(--font-barlow-condensed), sans-serif",
+              textShadow: isMobile ? "0 2px 10px rgba(0,0,0,0.95)" : undefined
+            }}
           >
             CRUCES
           </motion.div>
@@ -240,8 +262,15 @@ export default function HomePage() {
           {t("home_subtitle")}
         </div>
 
-        <div className="flex justify-center mb-8">
-          <VinylPlayer size={playerSize} />
+        {/* Interactive Gesture Activation Dock */}
+        <div className="flex justify-center mb-8 will-change-transform transform-gpu">
+          <button 
+            onClick={handleVinylClick}
+            className="focus:outline-none transition-transform active:scale-95 cursor-pointer bg-transparent border-0 p-0 block will-change-transform"
+            aria-label="Toggle Core Audio Context"
+          >
+            <VinylPlayer size={playerSize} />
+          </button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -251,7 +280,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
               exit={{ opacity: 0, y: -10 }}
-              className="mb-8 select-none"
+              className="mb-8 select-none transform-gpu"
             >
               <div 
                 className="font-bold text-[1.4rem] tracking-[0.2em] uppercase transition-colors duration-300" 
@@ -268,7 +297,7 @@ export default function HomePage() {
         </AnimatePresence>
 
         {/* Social Matrix Block */}
-        <div className="flex flex-wrap gap-7 justify-center items-center mb-10 mt-2 relative z-10 max-w-[460px] mx-auto">
+        <div className="flex flex-wrap gap-7 justify-center items-center mb-10 mt-2 relative z-10 max-w-[460px] mx-auto layout-gpu">
           {socials.map((s, i) => (
             <motion.a 
               key={s.name} 
@@ -279,14 +308,15 @@ export default function HomePage() {
               animate={{ 
                 opacity: 1, 
                 y: 0,
-                filter: isPlaying && currentTrack 
+                // 🟢 Bypasses expensive drop-shadow computations frames completely on handheld screens
+                filter: !isMobile && isPlaying && currentTrack 
                   ? [
                       `drop-shadow(0 0 2px ${currentTrack.color}44)`,
                       `drop-shadow(0 0 10px ${currentTrack.color}aa)`,
                       `drop-shadow(0 0 2px ${currentTrack.color}44)`
                     ] 
                   : "drop-shadow(0 0 0px transparent)",
-                scale: isPlaying ? [1, 1.08, 1] : 1
+                scale: isPlaying ? [1, 1.05, 1] : 1
               }}
               transition={{ 
                 opacity: { delay: 0.4 + i * 0.06, duration: 0.4 },
@@ -303,9 +333,9 @@ export default function HomePage() {
                   ease: "easeInOut" 
                 }
               }}
-              className="text-gray-400 no-underline transition-colors duration-200 relative group"
+              className="text-gray-400 no-underline transition-colors duration-200 relative group will-change-transform transform-gpu"
               style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}
-              whileHover={{ 
+              whileHover={isMobile ? {} : { 
                 color: currentTrack?.color || '#a8ff00',
                 filter: `drop-shadow(0 0 15px ${currentTrack?.color || '#a8ff00'})`,
                 scale: 1.2
@@ -317,7 +347,7 @@ export default function HomePage() {
                 style={{ 
                   color: currentTrack?.color || '#a8ff00',
                   borderColor: currentTrack?.color ? `${currentTrack.color}33` : "rgba(255,255,255,0.1)",
-                  boxShadow: currentTrack?.color ? `0 0 15px ${currentTrack.color}1A` : "none",
+                  boxShadow: !isMobile && currentTrack?.color ? `0 0 15px ${currentTrack.color}1A` : "none",
                   textShadow: "0 1px 2px rgba(0,0,0,0.9)"
                 }}
               >
@@ -336,7 +366,7 @@ export default function HomePage() {
               href={l.href} 
               target={l.external ? "_blank" : undefined}
               rel={l.external ? "noopener noreferrer" : undefined}
-              className="no-underline block w-full"
+              className="no-underline block w-full outline-none"
             >
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -344,14 +374,15 @@ export default function HomePage() {
                   opacity: 1, 
                   y: 0,
                   borderColor: isPlaying && currentTrack ? `${currentTrack.color}33` : "rgba(255,255,255,0.05)",
-                  boxShadow: isPlaying && currentTrack 
+                  // 🟢 Flattens infinite box-shadow blending loops down on mobile chips to avoid thermals
+                  boxShadow: !isMobile && isPlaying && currentTrack 
                     ? [
                         `0 0 10px ${currentTrack.color}08`,
                         `0 0 25px ${currentTrack.color}1A`,
                         `0 0 10px ${currentTrack.color}08`
                       ]
-                    : "0 0 0px transparent",
-                  scale: isPlaying ? [1, 1.015, 1] : 1
+                    : "0 2px 6px rgba(0,0,0,0.4)",
+                  scale: isPlaying ? [1, 1.01, 1] : 1
                 }}
                 transition={{ 
                   opacity: { delay: 0.3 + i * 0.08, duration: 0.4 },
@@ -367,15 +398,15 @@ export default function HomePage() {
                     ease: "easeInOut" 
                   }
                 }}
-                whileHover={{ 
+                whileHover={isMobile ? {} : { 
                   scale: 1.04, 
                   borderColor: currentTrack?.color || '#a8ff00', 
                   boxShadow: `0 0 30px ${currentTrack?.color || '#a8ff00'}26`,
                   backgroundColor: currentTrack?.color ? `${currentTrack.color}05` : "rgba(255,255,255,0.02)"
                 }}
                 whileTap={{ scale: 0.98 }}
-                className="bg-[#0b0b0b]/92 border border-white/5 rounded-sm p-5 w-full text-left cursor-pointer group transition-colors duration-300 flex flex-col justify-center h-24"
-                style={{ backdropFilter: "blur(6px)" }}
+                className="bg-[#0b0b0b]/92 border border-white/5 rounded-sm p-5 w-full text-left cursor-pointer group transition-colors duration-300 flex flex-col justify-center h-24 will-change-transform transform-gpu"
+                style={{ backdropFilter: "blur(4px)" }}
               >
                 <div 
                   className="font-bold text-[1.2rem] tracking-[0.15em] transition-colors duration-300"
