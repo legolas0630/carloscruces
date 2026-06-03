@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
+import Link from "next/link"; // Imported to handle modular redirection
 import SectionHeader from "@/components/SectionHeader";
 
 export default function LoginPage() {
@@ -36,7 +37,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen py-24 px-4 sm:px-10 max-w-[1100px] mx-auto">
       <div className="max-w-2xl">
-        {/* Adjusted to accept standard props matching your core framework structure */}
         <SectionHeader label="LOGIN" sub="ACCESS · ACCOUNT · BOOKINGS" />
 
         <div className="mt-12 grid gap-6">
@@ -99,11 +99,26 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 rounded-sm bg-[#a8ff00] py-3.5 px-4 font-bold tracking-[0.2em] text-xs uppercase text-black hover:bg-[#baff3b] shadow-[0_0_25px_rgba(168,255,0,0.1)] hover:shadow-[0_0_35px_rgba(168,255,0,0.3)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-2 rounded-sm bg-[#a8ff00] py-3.5 px-4 font-black tracking-[0.2em] text-xs uppercase text-black hover:bg-[#baff3b] shadow-[0_0_25px_rgba(168,255,0,0.1)] hover:shadow-[0_0_35px_rgba(168,255,0,0.3)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "AUTHENTICATING..." : "SIGN IN"}
             </button>
           </form>
+
+          {/* DYNAMIC REGISTRATION REDIRECTION SYSTEM */}
+          <div className="mt-4 pt-4 border-t border-zinc-900/60 text-center">
+            <p className="text-[0.65rem] tracking-[0.18em] text-zinc-500 uppercase font-medium">
+              New to the soundscape?{" "}
+              <Link 
+                href="/register" 
+                className="text-[#a8ff00] no-underline font-black hover:underline tracking-[0.18em] ml-1 transition-all duration-200"
+                style={{ textShadow: "0 0 10px rgba(168,255,0,0.2)" }}
+              >
+                CREATE PROTOCOL ACCOUNT
+              </Link>
+            </p>
+          </div>
+
         </div>
       </div>
     </div>

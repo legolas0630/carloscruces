@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 
 const WaveformVisualizer = React.memo(({ progress, isPlaying, onSeek, color }: any) => {
   const updateProgress = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!onSeek) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     onSeek((x / rect.width) * 100);

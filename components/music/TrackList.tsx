@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import WaveformVisualizer from "./WaveformVisualizer";
 
 interface TrackListProps {
   tracks: any[];
@@ -22,6 +23,8 @@ export default function TrackList({
   onTrackSelect,
   onDownloadInit,
 }: TrackListProps) {
+  const [hoveredId, setHoveredTrackId] = useState<number | null>(null);
+
   return (
     <div className="flex flex-col gap-2 w-full">
       {/* Category Track Count Header Header */}
@@ -51,18 +54,42 @@ export default function TrackList({
               borderColor: `${t.color}66`,
               background: "rgba(22, 22, 22, 0.85)"
             }}
+            onMouseEnter={() => setHoveredTrackId(t.id)}
+            onMouseLeave={() => setHoveredTrackId(null)}
             onClick={() => onTrackSelect(t)}
             style={{
               display: "flex", alignItems: "center", gap: "1rem",
               padding: "1rem 1.2rem", cursor: "pointer",
+              position: "relative",
+              overflow: "hidden",
               background: active ? "rgba(18, 18, 18, 0.95)" : "rgba(10, 10, 10, 0.4)",
               border: `1px solid ${active ? t.color + "55" : "rgba(255,255,255,0.06)"}`,
               borderRadius: 2, transition: "all 0.25s ease",
               boxShadow: active ? `0 0 15px ${t.color}22` : "none"
             }}
           >
+            {/* 1. Background Waveform Preview */}
+            <AnimatePresence>
+              {hoveredId === t.id && !active && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 0.15, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="absolute inset-0 z-0 flex items-center px-12 pointer-events-none"
+                >
+                  <div className="w-full h-8">
+                    <WaveformVisualizer 
+                      progress={0} 
+                      isPlaying={false} 
+                      color={t.color}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Track Indices Numbers Column */}
-            <div style={{ width: 32, textAlign: "center" }} className="select-none">
+            <div style={{ width: 32, textAlign: "center" }} className="select-none relative z-10">
               {active && isPlaying ? (
                 <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 0.8, repeat: Infinity }}>
                   <span style={{ color: t.color, fontSize: "0.9rem" }}>▶</span>
@@ -81,10 +108,10 @@ export default function TrackList({
               )}
             </div>
             
-            <img src={t.img} alt={t.title} className="w-10 h-10 rounded-sm object-cover shadow-md select-none pointer-events-none" />
+            <img src={t.img} alt={t.title} className="w-10 h-10 rounded-sm object-cover shadow-md select-none pointer-events-none relative z-10" />
             
             {/* Metadata Text Layout blocks */}
-            <div style={{ flex: 1 }} className="min-w-0">
+            <div style={{ flex: 1 }} className="min-w-0 relative z-10">
               <div 
                 style={{ 
                   fontFamily: "var(--font-barlow-condensed), sans-serif", 
@@ -122,7 +149,7 @@ export default function TrackList({
             </div>
             
             {/* Right Action Tools Column */}
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-5 relative z-10">
               <motion.button
                 whileHover={{ color: t.color, scale: 1.15 }}
                 onClick={(e) => { 
