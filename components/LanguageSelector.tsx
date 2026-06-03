@@ -8,19 +8,19 @@ import { Locale } from "@/lib/translations";
 interface LanguageOption {
   code: Locale;
   label: string;
-  flag: string;
+  flagCode: string; // 🟢 Country code target mapping for cross-platform vector SVGs
 }
 
 const LANGUAGES: LanguageOption[] = [
-  { code: "en", label: "EN", flag: "🇺🇸" },
-  { code: "es", label: "ES", flag: "🇲🇽" },
-  { code: "fr", label: "FR", flag: "🇫🇷" },
-  { code: "pt", label: "PT", flag: "🇧🇷" },
-  { code: "de", label: "DE", flag: "🇩🇪" },
-  { code: "ja", label: "JA", flag: "🇯🇵" },
-  { code: "zh", label: "ZH", flag: "🇨🇳" },
-  { code: "hi", label: "HI", flag: "🇮🇳" },
-  { code: "ar", label: "AR", flag: "🇸🇦" },
+  { code: "en", label: "EN", flagCode: "us" },
+  { code: "es", label: "ES", flagCode: "mx" },
+  { code: "fr", label: "FR", flagCode: "fr" },
+  { code: "pt", label: "PT", flagCode: "br" },
+  { code: "de", label: "DE", flagCode: "de" },
+  { code: "ja", label: "JA", flagCode: "jp" },
+  { code: "zh", label: "ZH", flagCode: "cn" },
+  { code: "hi", label: "HI", flagCode: "in" },
+  { code: "ar", label: "AR", flagCode: "sa" },
 ];
 
 export default function LanguageSelector() {
@@ -28,10 +28,8 @@ export default function LanguageSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Find the active language object configuration block
   const activeLanguage = LANGUAGES.find((l) => l.code === locale) || LANGUAGES[0];
 
-  // Close the popup dropdown box when clicking completely outside the menu bounds
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
       if (isOpen && containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -48,11 +46,8 @@ export default function LanguageSelector() {
 
   const handleLanguageChange = (code: Locale) => {
     setLocale(code);
-    
-    // Write preference sync tokens to secure matching logic inside our layout gates
     localStorage.setItem("cc_language_gate_dismissed", "true");
     document.cookie = `NEXT_LOCALE=${code}; path=/; max-age=31536000; SameSite=Lax; Secure`;
-    
     setIsOpen(false);
   };
 
@@ -66,12 +61,17 @@ export default function LanguageSelector() {
         className="bg-transparent border border-white/10 hover:border-[#a8ff00] text-zinc-300 hover:text-white px-3 py-1 rounded-sm cursor-pointer outline-none transition-all duration-200 flex items-center gap-2 text-xs font-bold tracking-widest uppercase transform-gpu focus:outline-none"
         style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
       >
-        <span>{activeLanguage.flag}</span>
+        {/* 🟢 High-res vector flag image replacement handles Windows machines cleanly */}
+        <img 
+          src={`https://flagcdn.com/w20/${activeLanguage.flagCode}.png`} 
+          alt=""
+          className="w-4 h-auto object-contain unselectable filter saturate-[0.8] contrast-[1.1]" 
+        />
         <span>{activeLanguage.label}</span>
         <motion.span 
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-[9px] text-zinc-500 group-hover:text-white"
+          className="text-[9px] text-zinc-500"
         >
           ▼
         </motion.span>
@@ -102,11 +102,14 @@ export default function LanguageSelector() {
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-sm">{lang.flag}</span>
+                      <img 
+                        src={`https://flagcdn.com/w20/${lang.flagCode}.png`} 
+                        alt="" 
+                        className="w-4 h-auto object-contain filter saturate-[0.8]"
+                      />
                       <span>{lang.label}</span>
                     </div>
                     
-                    {/* Tiny neon indicator dot for active context states */}
                     {isSelected && (
                       <span className="w-1 h-1 rounded-full bg-[#a8ff00] animate-pulse" />
                     )}
