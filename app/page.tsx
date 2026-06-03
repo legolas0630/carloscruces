@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePlayer } from "@/context/PlayerContext";
 import { useLanguage } from "@/context/LanguageContext";
 import VinylPlayer from "@/components/VinylPlayer";
+import Footer from "@/components/Footer"; // 🟢 Imported your dedicated standalone component
 
 interface LinkItem {
   label: string;
@@ -147,7 +148,6 @@ export default function HomePage() {
   ];
 
   return (
-    // 🟢 Changed from overflow-hidden to overflow-y-auto + justify-between to unlock scrolling mechanics seamlessly
     <div className="min-h-screen flex flex-col justify-between px-4 pt-28 pb-8 relative overflow-y-auto overflow-x-hidden bg-transparent transform-gpu">
       
       {/* ================= BULLETPROOF HARDWARE-ACCELERATED ANIMATIONS ================= */}
@@ -204,7 +204,7 @@ export default function HomePage() {
         <div 
           className="absolute inset-0 animate-analog-fuzz transition-[animation-duration,opacity] duration-500" 
           style={{
-            backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9Ij3M2MCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==")`,
+            backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjM2MCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==")`,
             backgroundSize: "140px 140px",
             animationDuration: isPlaying ? (isMobile ? "0.4s" : `${grainDuration}s`) : (isMobile ? "0.8s" : "0.12s"),
             opacity: isPlaying ? (isMobile ? 0.06 : 0.12) : (isMobile ? 0.03 : 0.06),
@@ -212,7 +212,7 @@ export default function HomePage() {
         />
       </div>
 
-      {/* 🟢 Flex Grow Container encapsulates items cleanly without squeezing into the sticky footer zone */}
+      {/* Flex Grow Container encapsulates items cleanly without squeezing into the sticky footer zone */}
       <motion.div
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
@@ -323,17 +323,8 @@ export default function HomePage() {
               transition={{ 
                 opacity: { delay: 0.4 + i * 0.06, duration: 0.4 },
                 y: { delay: 0.4 + i * 0.06, duration: 0.4 },
-                filter: { 
-                  duration: grainDuration, 
-                  repeat: isPlaying ? Infinity : 0, 
-                  repeatType: "reverse", 
-                  ease: "linear" 
-                },
-                scale: { 
-                  duration: pulseDuration, 
-                  repeat: isPlaying ? Infinity : 0, 
-                  ease: "easeInOut" 
-                }
+                filter: { duration: grainDuration, repeat: isPlaying ? Infinity : 0, repeatType: "reverse", ease: "linear" },
+                scale: { duration: pulseDuration, repeat: isPlaying ? Infinity : 0, ease: "easeInOut" }
               }}
               className="text-gray-400 no-underline transition-colors duration-200 relative group will-change-transform transform-gpu"
               style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}
@@ -376,7 +367,6 @@ export default function HomePage() {
                   opacity: 1, 
                   y: 0,
                   borderColor: isPlaying && currentTrack ? `${currentTrack.color}33` : "rgba(255,255,255,0.05)",
-                  // Flattens infinite box-shadow blending loops down on mobile chips to avoid thermals
                   boxShadow: !isMobile && isPlaying && currentTrack 
                     ? [
                         `0 0 10px ${currentTrack.color}08`,
@@ -389,16 +379,8 @@ export default function HomePage() {
                 transition={{ 
                   opacity: { delay: 0.3 + i * 0.08, duration: 0.4 },
                   y: { delay: 0.3 + i * 0.08, duration: 0.4 },
-                  boxShadow: { 
-                    duration: pulseDuration, 
-                    repeat: isPlaying ? Infinity : 0, 
-                    ease: "easeInOut" 
-                  },
-                  scale: { 
-                    duration: pulseDuration, 
-                    repeat: isPlaying ? Infinity : 0, 
-                    ease: "easeInOut" 
-                  }
+                  boxShadow: { duration: pulseDuration, repeat: isPlaying ? Infinity : 0, ease: "easeInOut" },
+                  scale: { duration: pulseDuration, repeat: isPlaying ? Infinity : 0, ease: "easeInOut" }
                 }}
                 whileHover={isMobile ? {} : { 
                   scale: 1.04, 
@@ -433,18 +415,8 @@ export default function HomePage() {
         </div>
       </motion.div>
 
-      {/* ================= 🟢 STICKY CYBERPUNK BRANDING FOOTER DOCK ================= */}
-      <footer className="w-full text-center relative z-10 mt-auto pt-8 pb-2 border-t border-white/5 font-mono text-[9px] tracking-[0.3em] text-zinc-600 uppercase select-none">
-        <div className="max-w-[460px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 px-4">
-          <div className="flex items-center gap-2">
-            <span className="w-1 h-1 rounded-full bg-zinc-700" />
-            <span>© {new Date().getFullYear()} CARLOS CRUCES</span>
-          </div>
-          <div className="flex items-center gap-4 text-zinc-500 font-bold">
-            <span className="text-[7px] text-zinc-700">// AUDIO_CORE_V1.1_OK</span>
-          </div>
-        </div>
-      </footer>
+      {/* 🟢 Render standalone global component reference cleanly onto the floor layout */}
+      <Footer /> 
 
     </div>
   );
