@@ -18,7 +18,7 @@ const OPTIONS: { code: Locale; display: string; region: string }[] = [
 ];
 
 export default function LanguageGate() {
-  const { changeLanguage } = useLanguage();
+  const { setLocale } = useLanguage();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function LanguageGate() {
   }, []);
 
   const handleSelection = (code: Locale) => {
-    changeLanguage(code);
+    setLocale(code);
     setIsVisible(false);
   };
 

@@ -153,7 +153,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     });
   };
 
-  // Continuous background canvas rendering loop
+  // Continuous background canvas rendering loop — Zero BPM Tech footprint
   useEffect(() => {
     if (!isPlaying || isScratching) {
       if (animRef.current) cancelAnimationFrame(animRef.current);
@@ -166,9 +166,8 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
       const delta = time - lastTime;
       lastTime = time;
 
-      const bpm = parseFloat(currentTrack.bpm) || 128;
-      const speedFactor = bpm / 128;
-      rotation.current = (rotation.current + delta * 0.04 * speedFactor) % 360;
+      // Pure organic rotation mapping decoupled from tracking values
+      rotation.current = (rotation.current + delta * 0.04) % 360;
 
       if (vinylRef.current) {
         vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
@@ -182,7 +181,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
-  }, [isPlaying, currentTrack, isScratching]);
+  }, [isPlaying, isScratching]);
 
   return (
     <motion.div
@@ -202,7 +201,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
         rotate: armWobble, 
         transformStyle: "preserve-3d",
         margin: "0 auto",
-        touchAction: "none", // Prevent native browser intercepts and layout page scrolls
+        touchAction: "none", 
         userSelect: "none"
       }}
       className="flex items-center justify-center select-none"
@@ -223,13 +222,15 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
           border: "1px solid #222"
         }}
       >
-        <Image 
-          src={currentTrack.sleeveImg || currentTrack.img} 
-          alt="Sleeve" 
-          fill
-          priority
-          className="object-cover opacity-80 saturate-[0.8] contrast-[1.1] pointer-events-none"
-        />
+        {currentTrack?.img && (
+          <Image 
+            src={currentTrack.sleeveImg || currentTrack.img} 
+            alt="Sleeve" 
+            fill
+            priority
+            className="object-cover opacity-80 saturate-[0.8] contrast-[1.1] pointer-events-none"
+          />
+        )}
         <div style={{
           position: "absolute", inset: 0, 
           background: `
@@ -254,7 +255,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           style={{
             position: "absolute", inset: -10, borderRadius: "50%",
-            boxShadow: `0 0 40px 10px ${currentTrack.color}22`,
+            boxShadow: `0 0 40px 10px ${currentTrack?.color || '#a8ff00'}22`,
             pointerEvents: "none"
           }}
         />
@@ -270,7 +271,9 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
           }}
         >
           <div ref={vinylRef} style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", willChange: "transform" }}>
-            <Image src={currentTrack.img} alt={currentTrack.title} fill className="object-cover opacity-[0.85] rounded-full pointer-events-none" />
+            {currentTrack?.img && (
+              <Image src={currentTrack.img} alt={currentTrack?.title || "Vinyl"} fill className="object-cover opacity-[0.85] rounded-full pointer-events-none" />
+            )}
             
             {/* Grooves */}
             <div style={{
@@ -327,7 +330,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
               border: "1px solid #333", transform: "rotate(-12deg)",
               display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 6
             }}>
-               <div style={{ width: 2, height: 6, background: currentTrack.color, boxShadow: `0 0 8px ${currentTrack.color}`, opacity: isPlaying ? 0.8 : 0, transition: "opacity 0.5s" }} />
+               <div style={{ width: 2, height: 6, background: currentTrack?.color || '#a8ff00', boxShadow: `0 0 8px ${currentTrack?.color || '#a8ff00'}`, opacity: isPlaying ? 0.8 : 0, transition: "opacity 0.5s" }} />
             </div>
           </motion.div>
         </motion.div>

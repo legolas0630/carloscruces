@@ -122,7 +122,7 @@ export default function AudioPlayer() {
             style={{ fontFamily: "var(--font-barlow), sans-serif" }}
             className="text-[0.68rem] text-gray-400 font-medium tracking-wider mt-0.5 uppercase truncate"
           >
-            {currentTrack.genre} · {currentTrack.bpm}
+            {currentTrack.genre}
           </div>
         </div>
       </div>

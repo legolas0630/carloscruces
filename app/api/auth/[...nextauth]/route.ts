@@ -1,22 +1,8 @@
+// app/api/auth/[...nextauth]/route.ts
 import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
-
-// Ensure this has the explicit "export" keyword before const
-export const authOptions = {
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
-    // ... your CredentialsProvider setup if present
-  ],
-  secret: process.env.NEXTAUTH_SECRET,
-  session: {
-    strategy: "jwt" as const,
-  },
-};
+import { authOptions } from "@/lib/auth"; // Import cleanly from the config home
 
 const handler = NextAuth(authOptions);
 
+// Next.js App Router only wants to see these named HTTP verbs
 export { handler as GET, handler as POST };
