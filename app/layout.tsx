@@ -12,6 +12,7 @@ import AudioPlayer from "@/components/AudioPlayer";
 import ParallaxBackground from "@/components/ParallaxBackground";
 import CookieConsent from "@/components/CookieConsent";
 import LanguageGate from "@/components/LanguageGate"; // Injected entry shield
+import Footer from "@/components/Footer"; // Persistent Platform Resource Links
 
 const barlow = Barlow({
   subsets: ["latin"],
@@ -42,9 +43,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className="scroll-smooth h-full">
       <body
-        className={`${barlow.variable} ${barlowCondensed.variable} antialiased bg-black text-[#f0f0f0] font-barlow-condensed overflow-x-hidden`}
+        className={`${barlow.variable} ${barlowCondensed.variable} antialiased bg-black text-[#f0f0f0] font-barlow-condensed overflow-x-hidden min-h-full flex flex-col`}
       >
         {/* All contextual data structures hydrate cleanly inside this layer */}
         <Providers>
@@ -52,19 +53,23 @@ export default function RootLayout({
           {/* The Gate intercepts un-profiled visitors before page assets mount */}
           <LanguageGate />
 
-          <div className="relative min-h-screen">
+          {/* Flex stacking container wrapper guarantees correct vertical positioning matrix */}
+          <div className="relative min-h-screen flex flex-col justify-between">
             {/* Ambient Background & Global Framework UI */}
             <ParallaxBackground />
             <Nav />
             
-            {/* Active Sub-Route Content Viewport */}
-            <main>{children}</main>
+            {/* Active Sub-Route Content Viewport - flex-grow handles dynamic floor pinning */}
+            <main className="flex-grow w-full relative z-10">{children}</main>
             
             {/* Persistent Audio Engine Interface */}
             <AudioPlayer />
             
             {/* Global User Privacy Compliance Ledger */}
             <CookieConsent />
+
+            {/* Global Minimalist Branding Footer */}
+            <Footer />
           </div>
 
         </Providers>
