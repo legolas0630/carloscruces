@@ -147,7 +147,8 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 sm:px-8 relative overflow-hidden bg-transparent transform-gpu">
+    // 🟢 Changed from overflow-hidden to overflow-y-auto + justify-between to unlock scrolling mechanics seamlessly
+    <div className="min-h-screen flex flex-col justify-between px-4 pt-28 pb-8 relative overflow-y-auto overflow-x-hidden bg-transparent transform-gpu">
       
       {/* ================= BULLETPROOF HARDWARE-ACCELERATED ANIMATIONS ================= */}
       <style dangerouslySetInnerHTML={{ __html: `
@@ -160,7 +161,7 @@ export default function HomePage() {
           100% { background-position: 25px 25px; }
         }
         
-        /* 🟢 Isolated native keyframes bypass React telemetry re-renders entirely */
+        /* Isolated native keyframes bypass React telemetry re-renders entirely */
         @keyframes carlosGlitch {
           0%, 100% { text-shadow: 0 0 10px #a8ff00, 2px 0 #00ffcc, -2px 0 #ff4400; }
           50% { text-shadow: 0 0 20px #a8ff00, -1px 0 #cc00ff, 1px 0 #00ffcc; }
@@ -203,7 +204,7 @@ export default function HomePage() {
         <div 
           className="absolute inset-0 animate-analog-fuzz transition-[animation-duration,opacity] duration-500" 
           style={{
-            backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjM2MCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==")`,
+            backgroundImage: `url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9Ij3M2MCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==")`,
             backgroundSize: "140px 140px",
             animationDuration: isPlaying ? (isMobile ? "0.4s" : `${grainDuration}s`) : (isMobile ? "0.8s" : "0.12s"),
             opacity: isPlaying ? (isMobile ? 0.06 : 0.12) : (isMobile ? 0.03 : 0.06),
@@ -211,15 +212,16 @@ export default function HomePage() {
         />
       </div>
 
+      {/* 🟢 Flex Grow Container encapsulates items cleanly without squeezing into the sticky footer zone */}
       <motion.div
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
         transition={{ duration: 1.2 }}
-        className="text-center relative z-10 w-full will-change-transform"
+        className="flex-grow flex flex-col items-center justify-center text-center relative z-10 w-full py-4 will-change-transform"
       >
         {/* Main Brand Title Frame */}
         <div className="mb-2" style={{ lineHeight: 0.88, userSelect: "none" }}>
-          {/* 🟢 CARLOS: Executing via background CSS handles high-frequency rendering perfectly */}
+          {/* CARLOS: Executing via background CSS handles high-frequency rendering perfectly */}
           <div
             className="font-black tracking-[0.05em] text-[#a8ff00] transform-gpu"
             style={{ 
@@ -234,7 +236,7 @@ export default function HomePage() {
             CARLOS
           </div>
           
-          {/* 🟢 CRUCES: Offloaded completely to hardware threads to avoid stalling */}
+          {/* CRUCES: Offloaded completely to hardware threads to avoid stalling */}
           <div
             className="font-black tracking-[0.05em] text-[#f0f0f0] transform-gpu"
             style={{ 
@@ -308,6 +310,7 @@ export default function HomePage() {
               animate={{ 
                 opacity: 1, 
                 y: 0,
+                // Bypasses expensive drop-shadow computations frames completely on handheld screens
                 filter: !isMobile && isPlaying && currentTrack 
                   ? [
                       `drop-shadow(0 0 2px ${currentTrack.color}44)`,
@@ -358,7 +361,7 @@ export default function HomePage() {
         </div>
 
         {/* Hub Interface Links Navigation Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-[460px] w-full mx-auto px-4 relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-[460px] w-full mx-auto px-4 relative z-10 mb-6">
           {links.map((l, i) => (
             <Link 
               key={l.href} 
@@ -373,6 +376,7 @@ export default function HomePage() {
                   opacity: 1, 
                   y: 0,
                   borderColor: isPlaying && currentTrack ? `${currentTrack.color}33` : "rgba(255,255,255,0.05)",
+                  // Flattens infinite box-shadow blending loops down on mobile chips to avoid thermals
                   boxShadow: !isMobile && isPlaying && currentTrack 
                     ? [
                         `0 0 10px ${currentTrack.color}08`,
@@ -427,8 +431,21 @@ export default function HomePage() {
             </Link>
           ))}
         </div>
-
       </motion.div>
+
+      {/* ================= 🟢 STICKY CYBERPUNK BRANDING FOOTER DOCK ================= */}
+      <footer className="w-full text-center relative z-10 mt-auto pt-8 pb-2 border-t border-white/5 font-mono text-[9px] tracking-[0.3em] text-zinc-600 uppercase select-none">
+        <div className="max-w-[460px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 px-4">
+          <div className="flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-zinc-700" />
+            <span>© {new Date().getFullYear()} CARLOS CRUCES</span>
+          </div>
+          <div className="flex items-center gap-4 text-zinc-500 font-bold">
+            <span className="text-[7px] text-zinc-700">// AUDIO_CORE_V1.1_OK</span>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }
