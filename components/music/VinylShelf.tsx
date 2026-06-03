@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/context/LanguageContext";
 import { usePlayer } from "@/context/PlayerContext"; // FIX: Capitalized to match your exact file name
 import { TRACKS } from "@/lib/tracks";
 
@@ -11,6 +12,7 @@ interface VinylShelfProps {
 
 export default function VinylShelf({ size = 300 }: VinylShelfProps) {
   const { currentTrack, isPlaying, play } = usePlayer();
+  const { t } = useLanguage();
 
   // Defensive check: Filters out duplicate entries to show unique album images safely
   const uniqueReleases = Array.from(new Set((TRACKS || []).map(t => t?.img).filter(Boolean)))
@@ -30,7 +32,7 @@ export default function VinylShelf({ size = 300 }: VinylShelfProps) {
     }}
     className="font-bold uppercase select-none"
   >
-    Select Release to Swap
+    {t("music_shelf_select")}
   </div>
 </div>
 
@@ -68,7 +70,7 @@ export default function VinylShelf({ size = 300 }: VinylShelfProps) {
                     {t.title}
                   </div>
                   <div className="text-[0.55rem] text-white/50 tracking-widest font-mono mt-0.5">
-                    {t.bpm}
+                    {t.genre}
                   </div>
                 </div>
               </div>

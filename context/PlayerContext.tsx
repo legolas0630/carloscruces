@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { TRACKS, Track } from "@/lib/tracks";
 
 interface PlayerContextType {
@@ -24,22 +24,144 @@ interface PlayerContextType {
 const PlayerContext = createContext<PlayerContextType | null>(null);
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
+  // 1. Core Audio Component States
   const [currentTrack, setCurrentTrack] = useState<Track>(TRACKS[0]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgressState] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.8);
+  const [volume, setVolumeState] = useState(0.8);
 
+  // 2. Persistent Hardware Reference Anchors
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const shouldAutoplayRef = useRef(false);
-
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const filterRef = useRef<BiquadFilterNode | null>(null);
   const distortionRef = useRef<WaveShaperNode | null>(null);
   const crackleGainRef = useRef<GainNode | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Hydrate telemetry parameters safely on browser mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("cc_last_track");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const matched = TRACKS.find(t => t.id === parsed.id);
+          if (matched) setCurrentTrack(matched);
+        } catch (e) {
+          console.error("Failed to parse cached audio token structures:", e);
+        }
+      }
+    }
+  }, []);
+
+  // Sync state modifications to disk cache layers
+  useEffect(() => {
+    if (currentTrack) {
+      localStorage.setItem("cc_last_track", JSON.stringify(currentTrack));
+    }
+  }, [currentTrack]);
+
+  // 3. Lazy Initialization for Web Audio API Matrix Controls
+  const initAudioEngine = useCallback(() => {
+    if (audioCtxRef.current || !audioRef.current) return;
+
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx = new AudioContextClass();
+    audioCtxRef.current = ctx;
+
+    const source = ctx.createMediaElementSource(audioRef.current);
+
+    // Build processing racks
+    const highPassFilter = ctx.createBiquadFilter();
+    highPassFilter.type = "highpass";
+    highPassFilter.frequency.value = 0;
+    filterRef.current = highPassFilter;
+
+    const waveShaper = ctx.createWaveShaper();
+    waveShaper.curve = null;
+    distortionRef.current = waveShaper;
+
+    const crackleNode = ctx.createGain();
+    crackleNode.gain.value = 0;
+    crackleGainRef.current = crackleNode;
+
+    // Direct wiring sequence paths
+    source.connect(highPassFilter);
+    highPassFilter.connect(waveShaper);
+    waveShaper.connect(crackleNode);
+    crackleNode.connect(ctx.destination);
+  }, []);
+
+  // 4. Core Audio Playback Controls
+  const play = useCallback((track?: Track) => {
+    initAudioEngine();
+    if (audioCtxRef.current?.state === "suspended") {
+      audioCtxRef.current.resume();
+    }
+
+    if (track) {
+      setCurrentTrack(track);
+      if (audioRef.current) {
+        audioRef.current.src = track.src;
+        audioRef.current.load();
+      }
+    }
+
+    setTimeout(() => {
+      audioRef.current?.play()
+        .then(() => setIsPlaying(true))
+        .catch(err => console.warn("Playback initialization blocked by client security flags:", err));
+    }, 50);
+  }, [initAudioEngine]);
+
+  const pause = useCallback(() => {
+    audioRef.current?.pause();
+    setIsPlaying(false);
+  }, []);
+
+  const toggle = useCallback(() => {
+    if (isPlaying) pause();
+    else play();
+  }, [isPlaying, play, pause]);
+
+  const skip = useCallback((dir: number) => {
+    const index = TRACKS.findIndex(t => t.id === currentTrack.id);
+    let nextIndex = index + dir;
+    if (nextIndex >= TRACKS.length) nextIndex = 0;
+    if (nextIndex < 0) nextIndex = TRACKS.length - 1;
+    play(TRACKS[nextIndex]);
+  }, [currentTrack, play]);
+
+  const setProgress = useCallback((seconds: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = seconds;
+      setProgressState(seconds);
+    }
+  }, []);
+
+  const setVolume = useCallback((v: number) => {
+    const boundedVolume = Math.max(0, Math.min(1, v));
+    setVolumeState(boundedVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = boundedVolume;
+    }
+  }, []);
+
+  const setRate = useCallback((r: number) => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = r;
+    }
+  }, []);
+
+  // 5. FX Parameters Processing Controls
+  const setHighPass = useCallback((freq: number) => {
+    if (filterRef.current) {
+      filterRef.current.frequency.setValueAtTime(freq, audioCtxRef.current?.currentTime || 0);
+    }
+  }, []);
 
   const makeDistortionCurve = (amount: number) => {
-    const k = amount * 100;
+    const k = typeof amount === "number" ? amount : 50;
     const n_samples = 44100;
     const curve = new Float32Array(n_samples);
     const deg = Math.PI / 180;
@@ -50,180 +172,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return curve;
   };
 
-  const createCrackleBuffer = (ctx: AudioContext) => {
-    const duration = 4; // 4 seconds of unique noise
-    const buffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) {
-      // Constant low-level surface hiss
-      data[i] = (Math.random() * 2 - 1) * 0.005;
-      // Random sparse pops/clicks
-      if (Math.random() > 0.99995) {
-        data[i] += (Math.random() * 2 - 1) * 0.3;
-      }
-    }
-    return buffer;
-  };
-
-  const initAudioCtx = useCallback(() => {
-    if (typeof window === "undefined" || audioCtxRef.current || !audioRef.current) return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioContextClass();
-      const source = ctx.createMediaElementSource(audioRef.current);
-      
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.value = 20; // Standard bass floor
-
-      const distortion = ctx.createWaveShaper();
-      distortion.curve = makeDistortionCurve(0);
-      distortion.oversample = '4x';
-
-      const crackleGain = ctx.createGain();
-      crackleGain.gain.value = 0;
-      
-      const crackleSource = ctx.createBufferSource();
-      crackleSource.buffer = createCrackleBuffer(ctx);
-      crackleSource.loop = true;
-      crackleSource.connect(crackleGain);
-      crackleGain.connect(ctx.destination);
-      crackleSource.start();
-
-      source.connect(filter);
-      filter.connect(distortion);
-      distortion.connect(ctx.destination);
-
-      audioCtxRef.current = ctx;
-      filterRef.current = filter;
-      distortionRef.current = distortion;
-      crackleGainRef.current = crackleGain;
-    } catch (e) {
-      console.error("Web Audio API initialization failed", e);
+  const setDistortion = useCallback((amount: number) => {
+    if (distortionRef.current) {
+      distortionRef.current.curve = amount > 0 ? makeDistortionCurve(amount) : null;
     }
   }, []);
-
-  const setHighPass = useCallback((freq: number) => {
-    if (!audioCtxRef.current) initAudioCtx();
-    filterRef.current?.frequency.setTargetAtTime(freq, audioCtxRef.current!.currentTime, 0.04);
-  }, [initAudioCtx]);
-
-  const setDistortion = useCallback((amount: number) => {
-    if (!audioCtxRef.current) initAudioCtx();
-    if (distortionRef.current) {
-      distortionRef.current.curve = makeDistortionCurve(amount);
-    }
-  }, [initAudioCtx]);
 
   const setCrackle = useCallback((amount: number) => {
-    if (!audioCtxRef.current) initAudioCtx();
-    crackleGainRef.current?.gain.setTargetAtTime(amount, audioCtxRef.current!.currentTime, 0.05);
-  }, [initAudioCtx]);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isPlaying) {
-      setCrackle(0.2); // Subtle base crackle when playing
-      interval = setInterval(() => {
-        if (audioRef.current) {
-          const currentTime = audioRef.current.currentTime;
-          const totalDuration = audioRef.current.duration;
-          if (totalDuration > 0) {
-            setProgress((currentTime / totalDuration) * 100);
-          }
-        }
-      }, 200); // Update 5 times per second instead of 60+
-    } else {
-      setCrackle(0);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, setCrackle]);
-
-  // Initialize audio element on mount
-  useEffect(() => {
-    audioRef.current = new Audio();
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  const skip = useCallback((dir: number) => {
-    const idx = TRACKS.findIndex((t) => t.id === currentTrack.id);
-    const next = TRACKS[(idx + dir + TRACKS.length) % TRACKS.length];
-    shouldAutoplayRef.current = true;
-    setCurrentTrack(next);
-    setProgress(0);
-  }, [currentTrack.id]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleLoadedMetadata = () => setDuration(audio.duration);
-    const handleEnded = () => skip(1);
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-
-    audio.src = currentTrack.src;
-    audio.load();
-    audio.volume = volume;
-
-    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-    audio.addEventListener("ended", handleEnded);
-    audio.addEventListener("play", handlePlay);
-    audio.addEventListener("pause", handlePause);
-
-    if (shouldAutoplayRef.current) {
-      audio.play().catch(err => console.log("Autoplay prevented:", err));
-      shouldAutoplayRef.current = false;
-    }
-
-    return () => {
-      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.removeEventListener("ended", handleEnded);
-      audio.removeEventListener("play", handlePlay);
-      audio.removeEventListener("pause", handlePause);
-    };
-  }, [currentTrack, skip]);
-
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume;
-  }, [volume]);
-
-  const play = useCallback((track?: Track) => {
-    if (track && track.id !== currentTrack.id) {
-      shouldAutoplayRef.current = true;
-      setCurrentTrack(track);
-      return;
-    }
-
-    audioRef.current?.play().catch(err => console.log(err));
-  }, [currentTrack.id]);
-
-  const pause = useCallback(() => {
-    audioRef.current?.pause();
-  }, []);
-
-  const toggle = useCallback(() => {
-    if (isPlaying) pause();
-    else play();
-  }, [isPlaying, pause, play]);
-
-  const setManualProgress = useCallback((p: number) => {
-    if (audioRef.current && audioRef.current.duration > 0) {
-      audioRef.current.currentTime = (p / 100) * audioRef.current.duration;
-      setProgress(p);
+    if (crackleGainRef.current) {
+      crackleGainRef.current.gain.setValueAtTime(amount, audioCtxRef.current?.currentTime || 0);
     }
   }, []);
 
-  const setRate = useCallback((r: number) => {
-    if (audioRef.current) {
-      audioRef.current.playbackRate = Math.max(0.1, Math.min(4, r));
-    }
-  }, []);
+  // 6. Native Runtime Update Handlers
+  const handleTimeUpdate = () => {
+    if (audioRef.current) setProgressState(audioRef.current.currentTime);
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) setDuration(audioRef.current.duration);
+  };
+
+  const handleTrackEnded = () => {
+    skip(1); // Auto-advances playlists on track completion
+  };
 
   return (
     <PlayerContext.Provider
@@ -238,20 +210,33 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         pause,
         toggle,
         skip,
-        setProgress: setManualProgress,
+        setProgress,
         setRate,
         setHighPass,
         setDistortion,
-        setCrackle
+        setCrackle,
       }}
     >
       {children}
+      
+      {/* Hidden native interface deck rendering pipeline */}
+      <audio
+        ref={audioRef}
+        src={currentTrack?.src}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={handleTrackEnded}
+        preload="metadata"
+      />
     </PlayerContext.Provider>
   );
 }
 
-export const usePlayer = () => {
+// 7. Clean Consumer Interface Endpoint
+export function usePlayer() {
   const context = useContext(PlayerContext);
-  if (!context) throw new Error("usePlayer must be used within a PlayerProvider");
+  if (!context) {
+    throw new Error("usePlayer must be run inside a unified PlayerProvider parent node.");
+  }
   return context;
-};
+}

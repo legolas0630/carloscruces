@@ -3,13 +3,15 @@ import type { Metadata } from "next";
 import { Barlow, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 
-// Import ONLY your custom unified client provider wrapper
+// Unified client provider architecture
 import Providers from "@/components/Providers";
 
-// Components
+// Core Platform Shell Components
 import Nav from "@/components/Nav";
 import AudioPlayer from "@/components/AudioPlayer";
 import ParallaxBackground from "@/components/ParallaxBackground";
+import CookieConsent from "@/components/CookieConsent";
+import LanguageGate from "@/components/LanguageGate"; // Injected entry shield
 
 const barlow = Barlow({
   subsets: ["latin"],
@@ -24,9 +26,9 @@ const barlowCondensed = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "Carlos Cruces | ASCEND · DESCEND · TRANSCEND",
-  description: "Official website of Carlos Cruces. Music, Visuals, Expeditions and Merch.",
-  manifest: "/manifest.json", // Tells mobile devices your PWA rules exist
+  title: "Carlos Cruces | Premium Audio & Visual Archive",  
+  description: "Explore the sonic world of Carlos Cruces. Stream exclusive underground electronic music, discover design aesthetics, and access high-fidelity digital discography collections.",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -44,14 +46,27 @@ export default function RootLayout({
       <body
         className={`${barlow.variable} ${barlowCondensed.variable} antialiased bg-black text-[#f0f0f0] font-barlow-condensed overflow-x-hidden`}
       >
-        {/* Using your custom client boundary component to handle the contexts safely */}
+        {/* All contextual data structures hydrate cleanly inside this layer */}
         <Providers>
+          
+          {/* The Gate intercepts un-profiled visitors before page assets mount */}
+          <LanguageGate />
+
           <div className="relative min-h-screen">
+            {/* Ambient Background & Global Framework UI */}
             <ParallaxBackground />
             <Nav />
+            
+            {/* Active Sub-Route Content Viewport */}
             <main>{children}</main>
+            
+            {/* Persistent Audio Engine Interface */}
             <AudioPlayer />
+            
+            {/* Global User Privacy Compliance Ledger */}
+            <CookieConsent />
           </div>
+
         </Providers>
       </body>
     </html>

@@ -1,67 +1,57 @@
 "use client";
 
 import React from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ProfileModuleProps {
   profileName: string;
-  setProfileName: (val: string) => void;
+  setProfileName: (name: string) => void;
   profileEmail: string;
-  setProfileEmail: (val: string) => void;
+  setProfileEmail?: (email: string) => void;
   nodeId: string;
-  onNotify: (msg: string) => void;
+  onNotify: () => void;
 }
 
-export default function ProfileModule({
-  profileName,
-  setProfileName,
-  profileEmail,
-  setProfileEmail,
-  nodeId,
-  onNotify,
-}: ProfileModuleProps) {
+export default function ProfileModule({ profileName, setProfileName, profileEmail, onNotify }: ProfileModuleProps) {
+  const { t } = useLanguage();
+
   return (
     <div>
-      <div className="border-b border-white/5 pb-4 mb-6 select-none">
+      <div className="border-b border-white/5 pb-4 mb-4 select-none">
         <h2 className="text-[0.75rem] font-black tracking-[0.25em] text-[#a8ff00] uppercase">
-          // IDENTIFICATION SETTINGS CONFIGURATORS
+          {t("profile_title")}
         </h2>
       </div>
-      <form 
-        onSubmit={(e) => { e.preventDefault(); onNotify("USER SYSTEM ATTRIBUTES COMPUTED"); }} 
-        className="space-y-5 max-w-xl"
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border-b border-white/5 pb-4 items-center">
-          <span className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Display Alias</span>
+
+      <p className="text-zinc-400 text-xs mb-6 leading-relaxed select-none">
+        {t("profile_desc")}
+      </p>
+
+      <div className="space-y-4">
+        <div className="flex flex-col gap-1.5 select-none">
+          <label className="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-wider">{t("profile_email_label")}</label>
+          <div className="bg-zinc-950/80 border border-white/5 px-3 py-2.5 text-xs text-zinc-500 rounded-sm font-mono cursor-not-allowed">
+            {profileEmail}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-wider select-none">{t("profile_name_label")}</label>
           <input 
-            type="text"
+            type="text" 
             value={profileName}
-            onChange={(e) => setProfileName(e.target.value.toUpperCase())}
-            className="sm:col-span-2 bg-[#111] border border-white/5 focus:border-[#a8ff00] rounded-sm px-4 py-2.5 text-sm font-sans font-bold tracking-wide text-white focus:outline-none uppercase"
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border-b border-white/5 pb-4 items-center">
-          <span className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Routing Email</span>
-          <input 
-            type="email"
-            value={profileEmail}
-            onChange={(e) => setProfileEmail(e.target.value)}
-            className="sm:col-span-2 bg-[#111] border border-white/5 focus:border-[#a8ff00] rounded-sm px-4 py-2.5 text-sm font-mono tracking-wide text-zinc-300 focus:outline-none"
+            onChange={(e) => setProfileName(e.target.value)}
+            className="bg-[#111] border border-white/10 focus:border-[#a8ff00] px-3 py-2.5 text-xs text-white rounded-sm outline-none font-sans font-bold tracking-wide transition-colors uppercase"
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pb-2 items-center">
-          <span className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Hardware Signature</span>
-          <span className="sm:col-span-2 text-zinc-500 font-mono text-xs tracking-widest uppercase pl-4 select-none">{nodeId} (PROTECTED)</span>
-        </div>
-
-        <button
-          type="submit"
-          className="px-6 py-2.5 bg-[#a8ff00] text-black font-black text-xs tracking-widest rounded-sm uppercase hover:bg-[#baff3b] transition-all"
+        <button 
+          onClick={onNotify}
+          className="w-full bg-[#a8ff00] hover:bg-[#baff3b] text-black font-black text-[0.65rem] tracking-widest py-3 rounded-sm transition-all uppercase shadow-md focus:outline-none mt-2"
         >
-          SAVE PROFILE MATRIX
+          {t("profile_save_btn")}
         </button>
-      </form>
+      </div>
     </div>
   );
 }

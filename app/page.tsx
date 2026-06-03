@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePlayer } from "@/context/PlayerContext";
+import { useLanguage } from "@/context/LanguageContext";
 import VinylPlayer from "@/components/VinylPlayer";
-import { TRACKS } from "@/lib/tracks";
 
 interface LinkItem {
   label: string;
@@ -17,18 +17,17 @@ interface LinkItem {
 
 export default function HomePage() {
   const { currentTrack, isPlaying } = usePlayer();
+  const { t, locale } = useLanguage();
   const [playerSize, setPlayerSize] = useState(260);
 
-  // Added optional chaining safeguards to avoid runtime crashes during initial context hydration
-  const grainDuration = React.useMemo(() => {
-    const bpm = parseFloat(currentTrack?.bpm) || 120;
-    return (60 / bpm) / 4; 
-  }, [currentTrack?.bpm]);
+  // Safeguarded tempo parsing to drive the synchronization matrices
+  const grainDuration = useMemo(() => {
+    return 60 / 128 / 4;
+  }, []);
 
-  const pulseDuration = React.useMemo(() => {
-    const bpm = parseFloat(currentTrack?.bpm) || 120;
-    return 60 / bpm;
-  }, [currentTrack?.bpm]);
+  const pulseDuration = useMemo(() => {
+    return 60 / 128;
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -39,12 +38,34 @@ export default function HomePage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const links: LinkItem[] = [
-    { label: "MUSIC", sub: `${TRACKS?.length || 0} TRACKS · VIBES`, href: "/music", color: "#a8ff00" },
-    { label: "VISUALS", sub: "GRAPHIC DESIGN · ART DIRECTION", href: "https://xiwame.space", color: "#00ffcc", external: true },
-    { label: "EXPEDITIONS", sub: "HIKING · MEDITATION · JOURNAL", href: "/expeditions", color: "#ff4400" },
-    { label: "MERCH", sub: "GEAR · APPAREL · LIMITED DROPS", href: "/merch", color: "#cc00ff" },
-  ];
+  // Reactive layout grid - hot-swaps language text streams instantly upon language toggle
+  const links: LinkItem[] = useMemo(() => [
+    { 
+      label: t("home_music_label"), 
+      sub: t("home_music_sub"), 
+      href: "/music", 
+      color: "#a8ff00" 
+    },
+    { 
+      label: t("home_visuals_label"), 
+      sub: t("home_visuals_sub"), 
+      href: "https://xiwame.space", 
+      color: "#00ffcc", 
+      external: true 
+    },
+    { 
+      label: t("home_expeditions_label"), 
+      sub: t("home_expeditions_sub"), 
+      href: "/expeditions", 
+      color: "#ff4400" 
+    },
+    { 
+      label: t("home_merch_label"), 
+      sub: t("home_merch_sub"), 
+      href: "/merch", 
+      color: "#cc00ff" 
+    },
+  ], [t, locale]);
 
   const socials = [
     {
@@ -61,7 +82,7 @@ export default function HomePage() {
       href: "https://www.instagram.com/vulnerabilityenthusiast/",
       icon: (
         <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0 3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
         </svg>
       )
     },
@@ -131,7 +152,7 @@ export default function HomePage() {
       `}} />
 
       <div className="fixed inset-0 z-0 pointer-events-none select-none overflow-hidden">
-        {/* Ambient Spotlight Layer (Helps illuminate the static detail underneath) */}
+        {/* Ambient Spotlight Layer */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(32,32,32,0.3)_0%,rgba(7,7,7,0.7)_85%)]" />
         <div 
           className="absolute inset-0 transition-all duration-1000" 
@@ -142,7 +163,7 @@ export default function HomePage() {
           }}
         />
 
-        {/* Base64-Encoded Static Grain Sheet */}
+        {/* Base64 Grain Overlay Frame */}
         <div 
           className="absolute inset-0 animate-analog-fuzz transition-[animation-duration,opacity] duration-500" 
           style={{
@@ -153,7 +174,6 @@ export default function HomePage() {
           }} 
         />
       </div>
-      {/* ============================================================================= */}
 
       <motion.div
         initial={{ opacity: 0 }} 
@@ -161,7 +181,7 @@ export default function HomePage() {
         transition={{ duration: 1.2 }}
         className="text-center relative z-10 w-full"
       >
-        {/* Hero Title with Dual-State loops */}
+        {/* Main Brand Title Frame */}
         <div className="mb-2" style={{ lineHeight: 0.88, userSelect: "none" }}>
           <motion.div
             animate={{ 
@@ -208,6 +228,7 @@ export default function HomePage() {
           </motion.div>
         </div>
 
+        {/* Localized Subtitle Hook */}
         <div 
           className="font-normal tracking-[0.6em] text-[#a8ff00] mt-3 mb-12 uppercase select-none" 
           style={{ 
@@ -216,7 +237,7 @@ export default function HomePage() {
             textShadow: "0 2px 8px rgba(0,0,0,0.9)"
           }}
         >
-          ASCEND · DESCEND · TRANSCEND
+          {t("home_subtitle")}
         </div>
 
         <div className="flex justify-center mb-8">
@@ -242,20 +263,11 @@ export default function HomePage() {
               >
                 {currentTrack.title}
               </div>
-              <div 
-                className="font-light text-[0.8rem] text-gray-400 mt-1 tracking-[0.3em]" 
-                style={{ 
-                  fontFamily: "var(--font-barlow-condensed), sans-serif",
-                  textShadow: "0 1px 5px rgba(0,0,0,0.9)"
-                }}
-              >
-                {currentTrack.bpm}
-              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ================= SOCIAL LINKS MATRIX: REPOSITIONED ABOVE THE GRID CARD SLOTS ================= */}
+        {/* Social Matrix Block */}
         <div className="flex flex-wrap gap-7 justify-center items-center mb-10 mt-2 relative z-10 max-w-[460px] mx-auto">
           {socials.map((s, i) => (
             <motion.a 
@@ -292,9 +304,7 @@ export default function HomePage() {
                 }
               }}
               className="text-gray-400 no-underline transition-colors duration-200 relative group"
-              style={{ 
-                textShadow: "0 2px 4px rgba(0,0,0,0.9)"
-              }}
+              style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}
               whileHover={{ 
                 color: currentTrack?.color || '#a8ff00',
                 filter: `drop-shadow(0 0 15px ${currentTrack?.color || '#a8ff00'})`,
@@ -302,7 +312,6 @@ export default function HomePage() {
               }}
               aria-label={s.name}
             >
-              {/* High Contrast Tooltip Guard */}
               <span 
                 className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-black/95 border text-[0.55rem] font-black tracking-[0.2em] uppercase opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-20 rounded-sm translate-y-2 group-hover:translate-y-0"
                 style={{ 
@@ -314,14 +323,12 @@ export default function HomePage() {
               >
                 {s.name}
               </span>
-
               {s.icon}
             </motion.a>
           ))}
         </div>
-        {/* ============================================================================================== */}
 
-        {/* Main Hub Links with Isolated Glassmorphism Layers */}
+        {/* Hub Interface Links Navigation Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-[460px] w-full mx-auto px-4 relative z-10">
           {links.map((l, i) => (
             <Link 

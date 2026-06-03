@@ -1,11 +1,9 @@
 export interface Track {
   id: number;
   title: string;
-  bpm: string;
   duration: string;
   color: string;
   img: string;
-  desc: string;
   src: string; 
   sleeveImg?: string;
   genre: string;
@@ -40,11 +38,9 @@ export const TRACKS: Track[] = [
   { 
     id: 1, 
     title: "CUMBIA BEATS", 
-    bpm: "148 BPM", 
     duration: "", 
     color: "#a8ff00", 
     img: "/artwork/cumbia-malice.jpeg", 
-    desc: "Industrial kick patterns layered over frozen sub frequencies.", 
     src: "/beats/cumbia-beats.mp3", 
     genre: "TECHNO", 
     type: "Single" 
@@ -52,11 +48,9 @@ export const TRACKS: Track[] = [
   { 
     id: 2, 
     title: "CUMBIA LIFE", 
-    bpm: "105 BPM", 
     duration: "", 
     color: "#00ffcc", 
     img: "/artwork/cumbia-malice.jpeg", 
-    desc: "Heavy bass meeting traditional rhythms.", 
     src: "/beats/cumbia-life.mp3", 
     genre: "CUMBIA", 
     type: "EP" 
@@ -64,11 +58,9 @@ export const TRACKS: Track[] = [
   { 
     id: 3, 
     title: "CUMBIA FILES", 
-    bpm: "155 BPM", 
     duration: "", 
     color: "#ffffff", 
     img: "/artwork/asfalto.JPG", 
-    desc: "Machine-soul transmissions filtered through industrial machinery.", 
     src: "/beats/cumbia-files.mp3", 
     genre: "TECHNO", 
     type: "Single" 
@@ -76,11 +68,9 @@ export const TRACKS: Track[] = [
   { 
     id: 4, 
     title: "CUMBIA CONFESSIONS", 
-    bpm: "140 BPM", 
     duration: "", 
     color: "#ff4400", 
     img: "/artwork/cumbia-confessions.jpeg", 
-    desc: "Chill ambient house for late night rides and early morning rituals.", 
     src: "/beats/cumbia-confessions.mp3", 
     genre: "Cumbia House", 
     type: "Single" 
@@ -88,11 +78,9 @@ export const TRACKS: Track[] = [
   { 
     id: 5, 
     title: "CUMBIA VILLERA", 
-    bpm: "105 BPM", 
     duration: "", 
     color: "#00ffcc", 
     img: "/artwork/cumbia-villera.jpeg", 
-    desc: "Heavy bass meeting traditional Latin rhythms in a dark warehouse setting.", 
     src: "/beats/cumbia-villera.mp3", 
     genre: "CUMBIA", 
     type: "Single" 
@@ -100,11 +88,9 @@ export const TRACKS: Track[] = [
   { 
     id: 6, 
     title: "Caida de Tlaloc", 
-    bpm: "152 BPM", 
     duration: "", 
     color: "#ff00cc", 
     img: "/artwork/caida-de-tlaloc.JPEG", 
-    desc: "Aggressive industrial textures and high-velocity percussion.", 
     src: "/beats/caida-de-tlaloc.mp3", 
     genre: "TECHNO", 
     type: "Single" 

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePlayer } from "@/context/PlayerContext"; 
+import { useLanguage } from "@/context/LanguageContext"; // Connected language context layer
 import { TRACKS } from "@/lib/tracks";
 import SectionHeader from "@/components/SectionHeader";
 import VinylPlayer from "@/components/VinylPlayer";
@@ -26,6 +27,7 @@ export default function MusicPage() {
 
 function MusicContent() {
   const { currentTrack, isPlaying, progress, play, toggle, setProgress } = usePlayer();
+  const { t } = useLanguage(); // Initialize translation hook
   const [playerSize, setPlayerSize] = useState(300);
   const [activeType, setActiveType] = useState<'ALL' | 'EP' | 'Single'>('ALL');
   const [activeGenre, setActiveGenre] = useState('ALL');
@@ -64,10 +66,9 @@ function MusicContent() {
     router.push(`?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
-  const grainDuration = React.useMemo(() => {
-    const bpm = parseFloat(currentTrack?.bpm) || 120;
-    return (60 / bpm) / 4;
-  }, [currentTrack?.bpm]);
+  const grainDuration = useMemo(() => {
+    return 60 / 128 / 4; // Normalized sweet spot timing fallback
+  }, []);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -112,7 +113,7 @@ function MusicContent() {
     
     try {
       const trackId = isLifetimePass ? "lifetime" : isEPDownload ? "full_ep" : downloadTrack?.id;
-      const title = isLifetimePass ? "Lifetime Discography" : isEPDownload ? "Full EP Collection" : downloadTrack?.title;
+      const title = isLifetimePass ? t("checkout_lifetime") : isEPDownload ? t("checkout_full_ep") : downloadTrack?.title;
 
       const response = await fetch(`/api/checkout/${method}`, {
         method: "POST",
@@ -130,23 +131,24 @@ function MusicContent() {
   };
 
   return (
-    <div className="min-h-screen py-24 px-4 sm:px-10 max-w-[1100px] mx-auto relative z-10">
+    <div className="min-h-screen py-24 px-4 sm:px-10 max-w-[1100px] mx-auto relative z-10 select-none">
       <AnimatePresence>
         {isInitialLoading && (
           <motion.div 
             initial={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[600] bg-black flex flex-col items-center justify-center gap-4"
           >
-            <div className="w-12 h-12 border-2 border-[#a8ff00]/10 border-t-[#a8ff00] rounded-full animate-spin" />
-            <div className="text-[0.6rem] tracking-[0.4em] text-[#a8ff00] uppercase font-bold animate-pulse">Initialising Frequencies</div>
+            <div className="w-10 h-10 border-2 border-[#a8ff00]/10 border-t-[#a8ff00] rounded-full animate-spin" />
+            <div className="text-[0.6rem] tracking-[0.4em] text-[#a8ff00] uppercase font-bold animate-pulse">
+              {t("music_loading")}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-        {/* Header Title Text Shadow Isolation */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <div className="relative z-20 drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
-          <SectionHeader label="MUSIC" sub="DISCOGRAPHY · RELEASES" />
+          <SectionHeader label={t("music_title")} sub={t("music_sub")} />
         </div>
 
         <FilterSystem 
@@ -158,25 +160,22 @@ function MusicContent() {
           onOpenEPDownload={() => setIsEPDownload(true)}
         />
 
-        {/* Core Layout Split Matrix Grid */}
+        {/* Core Split Screen Frame Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-8 lg:gap-12 items-start mt-12 relative z-10">
           
-          {/* LEFT INTERACTIVE MODULE COLUMN */}
+          {/* LEFT COLUMN: VINYL PLAYER DESK DISPLAY */}
           <div 
-            className="flex flex-col items-center gap-6 w-full p-6 sm:p-8 bg-[#090909]/60 border border-white/5 rounded-sm"
-            style={{ backdropFilter: "blur(8px)" }}
+            className="flex flex-col items-center gap-6 w-full p-6 sm:p-8 bg-[#090909]/60 border border-white/5 rounded-sm backdrop-blur-md"
           >
-            {/* Component 1: The Spinning 3D Disc Engine */}
             <div className="relative py-2 w-full flex justify-center">
               <VinylPlayer size={playerSize} />
             </div>
 
-            {/* Component 2: The Sliding Rack Release Changer */}
             <VinylShelf size={playerSize} />
             
-            {/* Component 3: Dynamic Typography Readout Panel */}
+            {/* Dynamic Typography Title Block */}
             <AnimatePresence mode="wait">
-              <motion.div key={currentTrack?.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center w-full">
+              <motion.div key={currentTrack?.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center w-full min-h-[40px]">
                 <h1 
                   style={{ 
                     fontFamily: "var(--font-barlow-condensed), sans-serif", 
@@ -184,30 +183,15 @@ function MusicContent() {
                     fontSize: "1.75rem", 
                     letterSpacing: "0.12em", 
                     color: currentTrack?.color || '#a8ff00',
-                    textShadow: "0 2px 12px rgba(0,0,0,1), 0 4px 24px rgba(0,0,0,0.8)"
+                    textShadow: "0 2px 12px rgba(0,0,0,1)"
                   }}
                   className="uppercase transition-colors duration-300"
                 >
                   {currentTrack?.title}
                 </h1>
-                <p 
-                  style={{ 
-                    fontFamily: "var(--font-barlow), sans-serif", 
-                    fontWeight: 400, 
-                    fontSize: "0.85rem", 
-                    color: "#9e9e9e", // Shifted to high contrast silver-gray
-                    marginTop: 6,
-                    lineHeight: 1.5,
-                    textShadow: "0 2px 8px rgba(0,0,0,1)"
-                  }}
-                  className="max-w-md mx-auto"
-                >
-                  {currentTrack?.desc}
-                </p>
               </motion.div>
             </AnimatePresence>
             
-            {/* Component 4: Decoupled Multi-Bar Scrubbing Controller */}
             <div className="w-full mt-2">
               <WaveformVisualizer 
                 progress={progress}
@@ -219,10 +203,9 @@ function MusicContent() {
             </div>
           </div>
 
-          {/* RIGHT SELECTION TRACKLIST COLUMN */}
+          {/* RIGHT COLUMN: ACTIVE TRACKLIST */}
           <div 
-            className="p-6 sm:p-8 bg-[#090909]/60 border border-white/5 rounded-sm w-full"
-            style={{ backdropFilter: "blur(8px)" }}
+            className="p-6 sm:p-8 bg-[#090909]/60 border border-white/5 rounded-sm w-full backdrop-blur-md"
           >
             <TrackList 
               tracks={filteredTracks}
@@ -238,7 +221,7 @@ function MusicContent() {
         </div>
       </motion.div>
 
-      {/* Modal Systems */}
+      {/* Modal Overlay Pipelines */}
       <AnimatePresence>
         {(downloadTrack || isEPDownload || isLifetimePass) && (
           <DownloadModal 

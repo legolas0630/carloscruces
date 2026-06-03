@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface SettingsModuleProps {
   tfaActive: boolean;
-  setTfaActive: (val: boolean) => void;
+  setTfaActive: (active: boolean) => void;
   telemetryActive: boolean;
-  setTelemetryActive: (val: boolean) => void;
+  setTelemetryActive: (active: boolean) => void;
   onNotify: (msg: string) => void;
 }
 
@@ -17,50 +18,62 @@ export default function SettingsModule({
   setTelemetryActive,
   onNotify,
 }: SettingsModuleProps) {
+  const { t } = useLanguage();
+
   return (
     <div>
-      <div className="border-b border-white/5 pb-4 mb-6 select-none">
+      <div className="border-b border-white/5 pb-4 mb-4 select-none">
         <h2 className="text-[0.75rem] font-black tracking-[0.25em] text-[#a8ff00] uppercase">
-          // SECURITY TERMINAL CORE CONTROLS
+          {t("settings_title")}
         </h2>
       </div>
+
+      <p className="text-zinc-400 text-xs mb-6 leading-relaxed select-none">
+        {t("settings_desc")}
+      </p>
+
       <div className="space-y-4">
-        
-        <div 
-          onClick={() => { setTfaActive(!tfaActive); onNotify(`2FA AUTHENTICATION ${!tfaActive ? "ENGAGED" : "DECOUPLING"}`); }}
-          className="flex items-center justify-between p-4 bg-[#0a0a0a] border border-white/5 rounded-sm cursor-pointer hover:border-white/10 transition-colors select-none"
-        >
-          <div>
-            <div className="text-xs font-bold tracking-wider text-zinc-200 uppercase">2FA ACCESS RE-ENFORCEMENT</div>
-            <div className="text-[0.62rem] text-zinc-500 mt-0.5 tracking-wide">REQUESTS SECURE SEED KEYS UPON CRITICAL RE-ROUTE DIRECTIVES</div>
+        {/* Toggle Flag Module 01 */}
+        <div className="flex items-center justify-between p-4 bg-white/[0.01] border border-white/5 rounded-sm select-none gap-4">
+          <div className="min-w-0">
+            <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-0.5">{t("settings_tfa_label")}</h4>
+            <p className="text-[0.58rem] text-zinc-500 tracking-wide font-medium uppercase leading-normal">{t("settings_tfa_sub")}</p>
           </div>
-          <button className={`text-[0.6rem] px-3 py-1 border font-black tracking-widest rounded-sm uppercase transition-colors duration-150 ${
-            tfaActive ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' : 'border-zinc-800 text-zinc-600 bg-zinc-950'
-          }`}>
-            {tfaActive ? "ACTIVE" : "OFF"}
-          </button>
-        </div>
-        
-        <div 
-          onClick={() => { setTelemetryActive(!telemetryActive); onNotify(`METRICS STREAMING ${!telemetryActive ? "DEPLOYED" : "TERMINATED"}`); }}
-          className="flex items-center justify-between p-4 bg-[#0a0a0a] border border-white/5 rounded-sm cursor-pointer hover:border-white/10 transition-colors select-none"
-        >
-          <div>
-            <div className="text-xs font-bold tracking-wider text-zinc-200 uppercase">AUDIO GRAPH TELEMETRY TELE-METERS</div>
-            <div className="text-[0.62rem] text-zinc-500 mt-0.5 tracking-wide">STORES REALTIME METRIC PROGRESS FOR RETURNING VISITS RE-LOAD FILES</div>
-          </div>
-          <button className={`text-[0.6rem] px-3 py-1 border font-black tracking-widest rounded-sm uppercase transition-colors duration-150 ${
-            telemetryActive ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' : 'border-zinc-800 text-zinc-600 bg-zinc-950'
-          }`}>
-            {telemetryActive ? "ENABLED" : "MUTED"}
+          <button 
+            onClick={() => {
+              setTfaActive(!tfaActive);
+              onNotify("SECURITY PARAMETERS OVERWRITTEN");
+            }}
+            className={`text-[0.6rem] font-black tracking-widest border px-3.5 py-1.5 rounded-sm transition-all focus:outline-none min-w-[85px] text-center ${
+              tfaActive 
+                ? "bg-[#a8ff00]/5 border-[#a8ff00]/30 text-[#a8ff00]" 
+                : "bg-transparent border-white/10 text-zinc-500 hover:text-white"
+            }`}
+          >
+            {tfaActive ? t("settings_active") : t("settings_disabled")}
           </button>
         </div>
 
-      </div>
-      
-      <div className="mt-12 pt-4 border-t border-white/5 text-[0.6rem] text-zinc-600 leading-normal select-none">
-        SYSTEM SECURITY LOG INSTANCE COMPLIANT WITH SYSTEM MATRIX CONTROLLERS v5<br />
-        DATA COMPILATION CACHE STATE: STABLE MUTABLE LOCAL STATE HOOKS INJECTED
+        {/* Toggle Flag Module 02 */}
+        <div className="flex items-center justify-between p-4 bg-white/[0.01] border border-white/5 rounded-sm select-none gap-4">
+          <div className="min-w-0">
+            <h4 className="text-xs font-bold text-white tracking-wider uppercase mb-0.5">{t("settings_telemetry_label")}</h4>
+            <p className="text-[0.58rem] text-zinc-500 tracking-wide font-medium uppercase leading-normal">{t("settings_telemetry_sub")}</p>
+          </div>
+          <button 
+            onClick={() => {
+              setTelemetryActive(!telemetryActive);
+              onNotify("DIAGNOSTIC PIPELINE STATUS UPDATED");
+            }}
+            className={`text-[0.6rem] font-black tracking-widest border px-3.5 py-1.5 rounded-sm transition-all focus:outline-none min-w-[85px] text-center ${
+              telemetryActive 
+                ? "bg-[#a8ff00]/5 border-[#a8ff00]/30 text-[#a8ff00]" 
+                : "bg-transparent border-white/10 text-zinc-500 hover:text-white"
+            }`}
+          >
+            {telemetryActive ? t("settings_active") : t("settings_disabled")}
+          </button>
+        </div>
       </div>
     </div>
   );
