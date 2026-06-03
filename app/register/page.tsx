@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { supabase } from "@/lib/supabase/client"; // Upgraded native browser client
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
@@ -24,28 +24,51 @@ export default function RegisterPage() {
     setIsProcessing(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
+      // 1. Fire native Supabase user allocation thread with inline metadata passing
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name.toUpperCase(),
+            tier: "STANDARD ACCESS",
+          },
+        },
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        router.push("/register/successful");
-      } else {
-        setError(data.message || "REGISTRATION FAILED. TRY AGAIN.");
+      if (signUpError) {
+        setError(signUpError.message.toUpperCase());
         setIsProcessing(false);
+        return;
+      }
+
+      if (data) {
+        // Reroute to success matrix or automatically intercept confirmation checkpoints
+        router.push("/register/successful");
       }
     } catch (err) {
       console.error(err);
       setError("NETWORK ERROR. UNABLE TO INITIALISE.");
       setIsProcessing(false);
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    setError("");
+    try {
+      // 2. Direct OAuth initialization hook matching your Supabase Dashboard setup
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        },
+      });
+
+      if (oauthError) {
+        setError(oauthError.message.toUpperCase());
+      }
+    } catch (err) {
+      setError("OAUTH HANDSHAKE FAILED.");
     }
   };
 
@@ -74,8 +97,9 @@ export default function RegisterPage() {
         {/* GOOGLE/GMAIL FEDERATION AUTHORIZATION GATEWAY */}
         <div className="grid gap-4 mb-2">
           <button
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-            className="w-full flex items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/50 py-3.5 px-4 font-bold tracking-[0.15em] text-xs uppercase text-white hover:bg-zinc-900 hover:border-zinc-700 transition-all duration-300 gap-3 focus:outline-none"
+            type="button"
+            onClick={handleGoogleRegister}
+            className="w-full flex items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/50 py-3.5 px-4 font-bold tracking-[0.15em] text-xs uppercase text-white hover:bg-zinc-900 hover:border-zinc-700 transition-all duration-300 gap-3 focus:outline-none cursor-pointer"
           >
             <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
               <path d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955 2.192 15.34 1 12.24 1c-6.075 0-11 4.925-11 11s4.925 11 11 11c6.338 0 10.545-4.458 10.545-10.715 0-.722-.075-1.275-.165-1.826H12.24z" />
@@ -109,7 +133,7 @@ export default function RegisterPage() {
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full bg-[#111] border border-white/5 px-4 py-3 text-sm text-white rounded-sm focus:outline-none focus:border-[#a8ff00] transition-colors uppercase font-medium placeholder-zinc-700 font-mono"
               placeholder="CARLOS CRUCES"
             />

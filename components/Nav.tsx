@@ -5,22 +5,39 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSession } from "next-auth/react";
 import { usePlayer } from "@/context/PlayerContext";
 import { useLanguage } from "@/context/LanguageContext";
 import LanguageSelector from "@/components/LanguageSelector";
+import { supabase } from "@/lib/supabase/client"; // Native client connection
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<any>(null); // Track authentication state locally
   const pathname = usePathname();
-  const { status } = useSession();
   const { isPlaying, currentTrack } = usePlayer();
   const { t, locale } = useLanguage();
   const navRef = useRef<HTMLElement>(null);
 
   // Deep, steady sound system pulse rate (equivalent to a grounded 120 BPM cadence)
   const pulseDuration = 0.5;
+
+  // Real-time Supabase Auth Session Sync Lifecycle Loop
+  useEffect(() => {
+    // 1. Instantly parse current session token on mount
+    supabase.auth.getUser().then(({ data: { user: activeUser } }) => {
+      setUser(activeUser);
+    });
+
+    // 2. Open active websocket channel to intercept any login/logout events dynamically
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Scroll Tracking Lifecycle Boundary
   useEffect(() => {
@@ -40,15 +57,15 @@ export default function Nav() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  // Dynamic Navigation Engine Schema — Recalculates securely on translation toggle
+  // Dynamic Navigation Engine Schema — Recalculates securely on user variations
   const links = useMemo(() => [
     { name: t("nav_music"), href: "/music" },
     { name: t("nav_visuals"), href: "https://xiwame.space", external: true }, 
     { name: t("nav_expeditions"), href: "/expeditions" },
     { name: t("nav_merch"), href: "/merch" },
-    { name: t("nav_account"), href: status === "authenticated" ? "/dashboard" : "/login" },
+    { name: t("nav_account"), href: user ? "/dashboard" : "/login" }, // Uses native user instance
     { name: t("nav_cart"), href: "/cart" },
-  ], [status, locale, t]);
+  ], [user, locale, t]);
 
   // Social Matrix Schema optimized to prevent redundant re-renders
   const socials = useMemo(() => [
@@ -115,7 +132,7 @@ export default function Nav() {
         </svg>
       )
     }
-  ], []);
+  ], [user]);
 
   return (
     <>
@@ -192,6 +209,7 @@ export default function Nav() {
         {/* Mobile Hamburger Drawer Trigger */}
         {!isOpen && (
           <button
+            type="button"
             onClick={() => setIsOpen(true)}
             className="sm:hidden z-[110] text-[#f0f0f0] bg-transparent border-none cursor-pointer focus:outline-none text-2xl flex items-center justify-center p-1"
           >
@@ -223,6 +241,7 @@ export default function Nav() {
               className="fixed top-0 right-0 h-screen w-screen max-w-full bg-transparent flex flex-col justify-between pt-28 pb-24 px-10 sm:hidden z-[105] overflow-y-auto"
             >
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
                 className="absolute top-6 right-6 text-zinc-500 hover:text-[#a8ff00] transition-colors duration-200 bg-transparent border-none cursor-pointer focus:outline-none text-2xl z-[115]"
               >
@@ -244,6 +263,7 @@ export default function Nav() {
                   const isActive = pathname === link.href || (link.name === t("nav_account") && pathname === "/dashboard");
                   const mobileButton = (
                     <motion.button
+                      type="button"
                       onClick={() => setIsOpen(false)}
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ 

@@ -1,21 +1,23 @@
 import React from "react";
-import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { createServerSupabase } from "@/lib/supabaseServer";
+import { createServerSupabase } from "@/lib/supabase/server";
 import DashboardClient from "./DashboardClient";
 
 export default async function DashboardPage() {
-  // 1. Authenticate session securely on the server edge
-  const session = await getServerSession(authOptions);
+  const supabase = createServerSupabase();
 
-  if (!session?.user?.email) {
+  // 1. Authenticate user session securely on the server edge via cookies
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user || !user.email) {
     redirect("/login");
   }
 
-  const email = session.user.email;
-  const name = session.user.name || "EXPLORER";
-  const supabase = createServerSupabase();
+  const email = user.email;
+  
+  // Extract profile name from federated provider metadata (Google) or email handle fallback
+  const rawName = user.user_metadata?.name || user.user_metadata?.full_name || email.split("@")[0];
+  const name = rawName || "EXPLORER";
 
   // 2. Fetch or automatically provision the secure user profile parameters
   let { data: profile } = await supabase
@@ -32,7 +34,13 @@ export default async function DashboardPage() {
     const { data: newProfile, error: createError } = await supabase
       .from("profiles")
       .insert([
-        { email, name: name.toUpperCase(), tier: "STANDARD ACCESS", node_id: fallbackNodeId, joined_date: currentStamp }
+        { 
+          email, 
+          name: name.toUpperCase(), 
+          tier: "STANDARD ACCESS", 
+          node_id: fallbackNodeId, 
+          joined_date: currentStamp 
+        }
       ])
       .select()
       .single();

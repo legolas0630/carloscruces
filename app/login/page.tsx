@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import SectionHeader from "@/components/SectionHeader";
 import { useLanguage } from "@/context/LanguageContext";
+import { supabase } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,20 +21,45 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await signIn("credentials", {
+      // 1. Direct secure execution via browser cookie architecture
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
-        callbackUrl: "/dashboard",
-        redirect: true,
       });
-      
-      if (res?.error) {
+
+      if (authError) {
         setError(t("login_err_auth"));
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user) {
+        // 2. Programmatic router advance + token refresh verification
+        router.push("/dashboard");
+        router.refresh();
       }
     } catch (err) {
       setError(t("login_err_fail"));
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSubmit = async () => {
+    setError("");
+    try {
+      // 3. Initiate federated OAuth handshakes over secure callback boundaries
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (oauthError) {
+        setError(oauthError.message);
+      }
+    } catch (err) {
+      setError(t("login_err_fail"));
     }
   };
 
@@ -44,7 +71,8 @@ export default function LoginPage() {
         <div className="mt-12 grid gap-6">
           {/* GOOGLE INTEGRATION ENTRY */}
           <button
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            type="button"
+            onClick={handleGoogleSubmit}
             className="w-full flex items-center justify-center rounded-sm border border-zinc-800 bg-zinc-950/50 py-3.5 px-4 font-black tracking-[0.2em] text-xs uppercase text-white hover:bg-zinc-900 hover:border-zinc-700 transition-all duration-300 gap-3 cursor-pointer shadow-xs"
           >
             <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -101,7 +129,11 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 rounded-sm bg={loading ? 'transparent' : '#a8ff00'} bg-[#a8ff00] py-4 px-4 font-black tracking-[0.25em] text-xs uppercase text-black hover:bg-[#baff3b] shadow-[0_0_25px_rgba(168,255,0,0.1)] hover:shadow-[0_0_40px_rgba(168,255,0,0.35)] transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              className={`w-full mt-2 rounded-sm py-4 px-4 font-black tracking-[0.25em] text-xs uppercase text-black transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                loading 
+                  ? "bg-zinc-800 border border-zinc-700 text-zinc-500 shadow-none" 
+                  : "bg-[#a8ff00] hover:bg-[#baff3b] shadow-[0_0_25px_rgba(168,255,0,0.1)] hover:shadow-[0_0_40px_rgba(168,255,0,0.35)]"
+              }`}
             >
               {loading ? t("login_loading") : t("login_btn")}
             </button>

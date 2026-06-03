@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/lib/supabaseClient";
-import { useLanguage } from "@/context/LanguageContext"; // Import translation context
+import { supabase } from "@/lib/supabase/client";
+import { useLanguage } from "@/context/LanguageContext";
 
 // Sub Module Connections
 import VaultModule from "@/components/dashboard/VaultModule";
@@ -17,7 +16,13 @@ import SettingsModule from "@/components/dashboard/SettingsModule";
 type TabID = "vault" | "history" | "membership" | "profile" | "settings";
 
 interface DashboardClientProps {
-  initialProfile: any;
+  initialProfile: {
+    name?: string;
+    node_id?: string | number;
+    tier?: string;
+    joined_date?: string;
+    email?: string;
+  };
   initialPurchases: any[];
   initialVaultDownloads: any[];
   initialExpeditions: any[];
@@ -30,23 +35,23 @@ export default function DashboardClient({
   initialExpeditions,
 }: DashboardClientProps) {
   const router = useRouter();
-  const { t, locale } = useLanguage(); // Grab translator parser and active locale
+  const { t, locale } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabID>("vault");
   const [saveNotification, setSaveNotification] = useState("");
 
   // Instant Hydration of UI State Strings from Immutable Server Props
-  const [profileName, setProfileName] = useState(initialProfile.name);
-  const [nodeId] = useState(initialProfile.node_id);
-  const [tier] = useState(initialProfile.tier);
-  const [joinedDate] = useState(initialProfile.joined_date);
+  const [profileName, setProfileName] = useState(initialProfile?.name || "");
+  const [nodeId] = useState(initialProfile?.node_id || "0000");
+  const [tier] = useState(initialProfile?.tier || "GUEST");
+  const [joinedDate] = useState(initialProfile?.joined_date || "");
 
   // Hardware/Security User Preference Controls
   const [tfaActive, setTfaActive] = useState(true);
   const [telemetryActive, setTelemetryActive] = useState(true);
 
   // Hydrated System Data Collections
-  const [vaultDownloads, setVaultDownloads] = useState(initialVaultDownloads);
-  const [purchases, setPurchases] = useState(initialPurchases);
+  const [vaultDownloads] = useState(initialVaultDownloads);
+  const [purchases] = useState(initialPurchases);
   const [expeditions, setExpeditions] = useState(initialExpeditions);
 
   const triggerSaveNotification = (msg: string) => {
@@ -55,13 +60,36 @@ export default function DashboardClient({
   };
 
   const handleUpdateProfile = async () => {
-    if (!initialProfile.email) return;
+    if (!initialProfile?.email) return;
+    
+    const formattedName = profileName.trim().toUpperCase();
+    
     const { error } = await supabase
       .from("profiles")
-      .update({ name: profileName.toUpperCase() })
+      .update({ name: formattedName })
       .eq("email", initialProfile.email);
 
-    if (!error) triggerSaveNotification("USER ALIAS COMPUTED SUCCESSFULLY");
+    if (!error) {
+      setProfileName(formattedName);
+      triggerSaveNotification("USER ALIAS COMPUTED SUCCESSFULLY");
+    } else {
+      triggerSaveNotification("MATRIX UPDATE FAILED");
+    }
+  };
+
+  /**
+   * Native Supabase Sign-Out Handler
+   * Completely destroys cookie payloads on both client and server edge layers,
+   * then moves user smoothly back to the logout sequence route.
+   */
+  const handleDisconnect = async () => {
+    try {
+      await supabase.auth.signOut();
+      router.push("/logout/successful");
+      router.refresh();
+    } catch (err) {
+      router.push("/");
+    }
   };
 
   // Memoized sidebar layout tracking array — updates dynamically on language switches
@@ -69,7 +97,7 @@ export default function DashboardClient({
     { id: "vault" as TabID, label: t("dash_vault"), sub: "ACCESS ASSETS" },
     { id: "history" as TabID, label: t("dash_history"), sub: "ORDER LOGS" },
     { id: "membership" as TabID, label: t("dash_membership"), sub: "SUBSCRIPTION STATUS" },
-    { id: "profile" as TabID, label: t("profile_title").replace("// ", ""), sub: "MUTATE ALIAS" },
+    { id: "profile" as TabID, label: t("profile_title")?.replace("// ", "") || "PROFILE", sub: "MUTATE ALIAS" },
     { id: "settings" as TabID, label: t("dash_settings"), sub: "TOGGLE HARDWARE" },
   ], [t, locale]);
 
@@ -80,7 +108,9 @@ export default function DashboardClient({
       <AnimatePresence>
         {saveNotification && (
           <motion.div 
-            initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -50 }}
+            initial={{ opacity: 0, y: -50 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: -50 }}
             className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#a8ff00] text-black font-black text-[0.65rem] tracking-[0.25em] px-6 py-3 rounded-sm z-[600] border border-white/20 uppercase shadow-2xl"
           >
             ✓ {saveNotification}
@@ -98,7 +128,7 @@ export default function DashboardClient({
             {t("dash_welcome")}, {profileName || "Explorer"}
           </h1>
           <p className="text-zinc-500 text-xs mt-2 tracking-wide">
-            Access authorized via account terminal token <span className="text-zinc-400">{initialProfile.email}</span>
+            Access authorized via account terminal token <span className="text-zinc-400">{initialProfile?.email}</span>
           </p>
         </div>
         
@@ -107,7 +137,11 @@ export default function DashboardClient({
             {t("dash_clearance")}: <span className="text-[#a8ff00] ml-1">{tier}</span>
           </span>
           
-          <button onClick={() => signOut({ callbackUrl: "/logout/successful" })} className="border border-white/10 hover:border-red-500 hover:text-red-400 bg-white/[0.02] text-zinc-400 px-4 py-2 rounded-sm text-[0.65rem] font-bold tracking-wider uppercase transition-all duration-200 shadow-md">
+          <button 
+            type="button"
+            onClick={handleDisconnect} 
+            className="border border-white/10 hover:border-red-500 hover:text-red-400 bg-white/[0.02] text-zinc-400 px-4 py-2 rounded-sm text-[0.65rem] font-bold tracking-wider uppercase transition-all duration-200 shadow-md cursor-pointer"
+          >
             {t("dash_disconnect")}
           </button>
         </div>
@@ -125,8 +159,10 @@ export default function DashboardClient({
             const active = activeTab === item.id;
             return (
               <button
-                key={item.id} onClick={() => setActiveTab(item.id)}
-                className={`w-full text-left px-4 py-3 border rounded-sm transition-all duration-200 h-16 flex flex-col justify-center ${
+                type="button"
+                key={item.id} 
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full text-left px-4 py-3 border rounded-sm transition-all duration-200 h-16 flex flex-col justify-center cursor-pointer ${
                   active ? "bg-[#111] border-[#a8ff00]/40 text-[#a8ff00] shadow-sm" : "bg-transparent border-transparent text-zinc-400 hover:text-white"
                 }`}
               >
@@ -140,7 +176,13 @@ export default function DashboardClient({
         {/* Component Display Viewport Box */}
         <div className="bg-[#090909]/60 border border-white/5 p-6 sm:p-8 rounded-sm backdrop-blur-md min-h-[460px]">
           <AnimatePresence mode="wait">
-            <motion.div key={activeTab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}>
+            <motion.div 
+              key={activeTab} 
+              initial={{ opacity: 0, x: 10 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, x: -10 }} 
+              transition={{ duration: 0.2 }}
+            >
               
               {activeTab === "vault" && (
                 <VaultModule 
@@ -162,7 +204,6 @@ export default function DashboardClient({
                   joinedDate={joinedDate} 
                   setJoinedDate={() => {}} 
                   expeditions={expeditions} 
-                  setExpeditions={setExpeditions} 
                   onNotify={triggerSaveNotification} 
                 />
               )}
@@ -171,9 +212,9 @@ export default function DashboardClient({
                 <ProfileModule 
                   profileName={profileName} 
                   setProfileName={setProfileName} 
-                  profileEmail={initialProfile.email} 
+                  profileEmail={initialProfile?.email || ""} 
                   setProfileEmail={() => {}} 
-                  nodeId={nodeId} 
+                  nodeID={String(nodeId)}
                   onNotify={handleUpdateProfile} 
                 />
               )}

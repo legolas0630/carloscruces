@@ -8,11 +8,17 @@ interface ProfileModuleProps {
   setProfileName: (name: string) => void;
   profileEmail: string;
   setProfileEmail?: (email: string) => void;
-  nodeId: string;
+  nodeID: string;
   onNotify: () => void;
 }
 
-export default function ProfileModule({ profileName, setProfileName, profileEmail, onNotify }: ProfileModuleProps) {
+export default function ProfileModule({ 
+  profileName, 
+  setProfileName, 
+  profileEmail, 
+  nodeID, // 🟢 Destructured correctly here
+  onNotify 
+}: ProfileModuleProps) {
   const { t } = useLanguage();
 
   return (
@@ -28,26 +34,41 @@ export default function ProfileModule({ profileName, setProfileName, profileEmai
       </p>
 
       <div className="space-y-4">
+        {/* READONLY NODE IDENTIFIER FIELD */}
         <div className="flex flex-col gap-1.5 select-none">
-          <label className="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-wider">{t("profile_email_label")}</label>
-          <div className="bg-zinc-950/80 border border-white/5 px-3 py-2.5 text-xs text-zinc-500 rounded-sm font-mono cursor-not-allowed">
+          <label className="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-wider">
+            CORE HARDWARE NODE ID
+          </label>
+          <div className="bg-zinc-950/40 border border-white/5 px-3 py-2.5 text-xs text-zinc-400 rounded-sm font-mono select-all">
+            {nodeID}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5 select-none">
+          <label className="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-wider">
+            {t("profile_email_label") || "TERMINAL EMAIL ADDRESS"}
+          </label>
+          <div className="bg-zinc-950/80 border border-white/5 px-3 py-2.5 text-xs text-zinc-500 rounded-sm">
             {profileEmail}
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-wider select-none">{t("profile_name_label")}</label>
-          <input 
-            type="text" 
+          <label className="text-[0.55rem] text-zinc-500 font-bold uppercase tracking-wider select-none">
+            {t("profile_name_label") || "EDIT ALIAS"}
+          </label>
+          <input
+            type="text"
             value={profileName}
             onChange={(e) => setProfileName(e.target.value)}
-            className="bg-[#111] border border-white/10 focus:border-[#a8ff00] px-3 py-2.5 text-xs text-white rounded-sm outline-none font-sans font-bold tracking-wide transition-colors uppercase"
+            className="bg-[#111] border border-white/10 focus:border-[#a8ff00] px-3 py-2.5 text-xs text-white rounded-sm focus:outline-none transition-colors duration-200 font-mono"
           />
         </div>
 
-        <button 
+        <button
+          type="button"
           onClick={onNotify}
-          className="w-full bg-[#a8ff00] hover:bg-[#baff3b] text-black font-black text-[0.65rem] tracking-widest py-3 rounded-sm transition-all uppercase shadow-md focus:outline-none mt-2"
+          className="w-full bg-[#a8ff00] hover:bg-[#baff3b] text-black font-black text-[0.65rem] tracking-[0.2em] py-3.5 px-4 rounded-sm transition-all duration-300 uppercase cursor-pointer mt-2"
         >
           {t("profile_save_btn")}
         </button>
