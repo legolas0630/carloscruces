@@ -5,16 +5,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/context/LanguageContext";
 import { Locale } from "@/lib/translations";
 
-const OPTIONS: { code: Locale; display: string; region: string }[] = [
-  { code: "en", display: "EN", region: "Global" },
-  { code: "es", display: "ES", region: "México" },
-  { code: "fr", display: "FR", region: "Europe" },
-  { code: "pt", display: "PT", region: "Brasil" },
-  { code: "de", display: "DE", region: "Europa" },
-  { code: "ja", display: "JA", region: "Japan" },
-  { code: "zh", display: "ZH", region: "China" },
-  { code: "hi", display: "HI", region: "India" },
-  { code: "ar", display: "AR", region: "M-East" },
+const OPTIONS: { code: Locale; display: string; region: string; flag: string }[] = [
+  { code: "en", display: "EN", region: "Global", flag: "🇺🇸" },
+  { code: "es", display: "ES", region: "México", flag: "🇲🇽" },
+  { code: "fr", display: "FR", region: "Europe", flag: "🇫🇷" },
+  { code: "pt", display: "PT", region: "Brasil", flag: "🇧🇷" },
+  { code: "de", display: "DE", region: "Europa", flag: "🇩🇪" },
+  { code: "ja", display: "JA", region: "Japan", flag: "🇯🇵" },
+  { code: "zh", display: "ZH", region: "China", flag: "🇨🇳" },
+  { code: "hi", display: "HI", region: "India", flag: "🇮🇳" },
+  { code: "ar", display: "AR", region: "M-East", flag: "🇸🇦" },
 ];
 
 export default function LanguageGate() {
@@ -23,7 +23,7 @@ export default function LanguageGate() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // 1. Dual-layer storage audit ensures returning visitors bypass the gate instantly
+      // Dual-layer storage audit ensures returning visitors bypass the gate instantly
       const gateDismissed = localStorage.getItem("cc_language_gate_dismissed");
       const hasLocaleCookie = document.cookie.split("; ").find(row => row.startsWith("NEXT_LOCALE="));
       
@@ -34,10 +34,10 @@ export default function LanguageGate() {
   }, []);
 
   const handleSelection = (code: Locale) => {
-    // 2. Commit choice to application context engine
+    // Commit choice to application context engine
     setLocale(code);
 
-    // 3. Write immutable structural tokens to block future automated gate triggers
+    // Write immutable structural tokens to block future automated gate triggers
     localStorage.setItem("cc_language_gate_dismissed", "true");
     document.cookie = `NEXT_LOCALE=${code}; path=/; max-age=31536000; SameSite=Lax; Secure`;
 
@@ -52,7 +52,7 @@ export default function LanguageGate() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ type: "spring", stiffness: 380, damping: 28 }}
-          // 🟢 Pinned to the bottom-right viewport floor to simulate a clean cookie popup tray
+          // Pinned to the bottom-right viewport floor to simulate a clean cookie popup tray
           className="fixed bottom-6 right-6 z-[9999] w-[calc(100vw-3rem)] max-w-sm sm:max-w-md bg-[#09090b]/95 border border-zinc-800/80 rounded-sm p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] backdrop-blur-xl font-mono text-zinc-400 select-none transform-gpu"
         >
           {/* Subtle Animated Micro-fuzz Telemetry Layer */}
@@ -81,7 +81,7 @@ export default function LanguageGate() {
               <span className="w-1.5 h-1.5 rounded-full bg-[#a8ff00] animate-pulse" />
               <span className="text-[10px] font-bold tracking-[0.3em] text-white uppercase">SYS_LOCALE_CONTEXT</span>
             </div>
-            <span className="text-[8px] text-zinc-600 tracking-widest">v1.0.2 // DISMISS_ON_CLICK</span>
+            <span className="text-[8px] text-zinc-600 tracking-widest">v1.0.3 // DISMISS_ON_CLICK</span>
           </div>
 
           <p className="text-[11px] text-zinc-500 leading-relaxed mb-4 tracking-wide relative z-10">
@@ -102,9 +102,15 @@ export default function LanguageGate() {
                 whileTap={{ scale: 0.98 }}
                 className="bg-[#0e0e11] border border-zinc-900 rounded-xs py-2 px-3 text-left transition-colors duration-150 flex flex-col justify-center h-12 cursor-pointer focus:outline-none group transform-gpu"
               >
-                <span className="text-xs font-bold text-zinc-300 group-hover:text-white transition-colors">
-                  {lang.display}
-                </span>
+                {/* 🟢 Inline Flex block positions the native flag neatly next to code tokens */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm select-none" role="img" aria-label={`${lang.display} flag`}>
+                    {lang.flag}
+                  </span>
+                  <span className="font-sans font-bold text-sm tracking-wide text-zinc-300 group-hover:text-white transition-colors">
+                    {lang.display}
+                  </span>
+                </div>
                 <span className="text-[7px] text-zinc-600 group-hover:text-[#a8ff00]/70 transition-colors tracking-widest uppercase mt-0.5">
                   {lang.region}
                 </span>

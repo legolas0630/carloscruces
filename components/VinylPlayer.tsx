@@ -17,6 +17,9 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [isScratching, setIsScratching] = useState(false);
   
+  // Hardware Acceleration Anchor: Protects scratch vectors against React layout-wiping cycles
+  const vinylRotation = useMotionValue(0);
+  
   // Positional and Vector references for accurate scratching mechanics
   const centerCoords = useRef({ x: 0, y: 0 });
   const lastAngle = useRef(0);
@@ -68,7 +71,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     return Math.atan2(dy, dx) * (180 / Math.PI);
   };
 
-  // 🟢 Thermal optimization utility: Extracts current rotation angle out of CSS matrix tracking layers
+  // Thermal optimization utility: Extracts current rotation angle out of CSS matrix tracking layers
   const getComputedRotation = (el: HTMLDivElement) => {
     const style = window.getComputedStyle(el, null);
     const transform = style.getPropertyValue("-webkit-transform") || style.getPropertyValue("transform");
@@ -81,27 +84,33 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     return rotation.current;
   };
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    
-    // Catch active angle state from the native CSS layout thread before pausing it
-    if (isMobile && vinylRef.current) {
-      rotation.current = getComputedRotation(vinylRef.current);
-      vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
-    }
-
-    setIsScratching(true);
-    dragDistance.current = 0;
-    lastMoveTime.current = performance.now();
-
+  const updateCenterCoords = () => {
     if (vinylRef.current) {
       const rect = vinylRef.current.getBoundingClientRect();
       centerCoords.current = {
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
       };
-      lastAngle.current = getAngle(e.clientX, e.clientY);
     }
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    
+    // Catch active angle state from the native CSS layout thread before pausing it
+    if (vinylRef.current) {
+      const computedRot = getComputedRotation(vinylRef.current);
+      rotation.current = computedRot;
+      vinylRotation.set(computedRot); // Synergizes raw thread layers flawlessly
+    }
+
+    setIsScratching(true);
+    dragDistance.current = 0;
+    lastMoveTime.current = performance.now();
+
+    // Recalculate immediate layout mapping space
+    updateCenterCoords();
+    lastAngle.current = getAngle(e.clientX, e.clientY);
     
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -116,6 +125,9 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     const now = performance.now();
     const deltaTime = now - lastMoveTime.current;
 
+    // Update the center coordinates continuously on drag to prevent layout drift
+    updateCenterCoords();
+
     // Standardize polar trajectory calculation across desktop, tablet, and mobile axes
     const currentAngle = getAngle(e.clientX, e.clientY);
     let deltaAngle = currentAngle - lastAngle.current;
@@ -127,14 +139,16 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
     // Map gesture angular velocity parameters straight to the audio matrix pipeline
     const velocity = Math.abs(deltaAngle) / (deltaTime || 1);
     
-    // Scale rate manipulation curves based on scratch direction
-    const rateDirection = deltaAngle >= 0 ? 1 : -1;
-    const targetRate = Math.min(Math.max(-3.0, (velocity * 1.8) * rateDirection), 3.0);
-    
     // Smooth out jitter configurations if pointer is moving slowly
     if (Math.abs(deltaAngle) > 0.1) {
+      // 🟢 HARDWARE PROTECTION CLAMP: HTML5 audio crashes below 0.06 or with negative speeds.
+      // Keeping it clamped between 0.1 and 3.0 keeps it sounding fast and responsive with 0 errors.
+      const targetRate = Math.min(Math.max(0.1, velocity * 1.8), 3.0);
       setRate(targetRate);
       
+      // Displace tone arm angle relative to immediate gesture momentum parameters
+      armWobble.set(deltaAngle * 0.4);
+
       const targetFreq = Math.min(20 + velocity * 1200, 3500);
       const distortionAmount = Math.min(velocity * 0.3, 0.8);
       const crackleIntensity = Math.min(0.2 + velocity * 0.4, 0.7);
@@ -146,36 +160,34 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
 
     dragDistance.current += Math.abs(deltaAngle);
     rotation.current = (rotation.current + deltaAngle) % 360;
+    vinylRotation.set(rotation.current); // Direct low-latency hardware stream mapping
 
     lastAngle.current = currentAngle;
     lastMoveTime.current = now;
-
-    // Render directly to DOM to bypass latency bottlenecks
-    if (vinylRef.current) {
-      vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
-    }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     setIsScratching(false);
     e.currentTarget.releasePointerCapture(e.pointerId);
 
-    // Smoothly restore defaults
+    // Smoothly restore audio default values
     setRate(1.0);
     setHighPass(20);
     setDistortion(0);
     setCrackle(isPlaying ? 0.2 : 0);
 
-    animate(armWobble, [0, 6, -3, 1, 0], {
+    // Clean end target physics mapping replaces the broken array structure logic
+    animate(armWobble, 0, {
       type: "spring",
-      stiffness: 350,
-      damping: 10,
+      stiffness: 300,
+      damping: 8, // Lower under-damped multiplier creates a smooth tone needle wobble oscillation on release
+      restDelta: 0.01
     });
   };
 
   // Continuous background canvas rendering loop — Zero BPM Tech footprint
   useEffect(() => {
-    // 🟢 Dynamic Bypass: If on mobile, offload regular spin animations entirely to native CSS loops
+    // Dynamic Bypass: If on mobile, offload regular spin animations entirely to native CSS loops
     if (isMobile || !isPlaying || isScratching) {
       if (animRef.current) cancelAnimationFrame(animRef.current);
       return;
@@ -189,10 +201,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
 
       // Pure organic rotation mapping decoupled from tracking values
       rotation.current = (rotation.current + delta * 0.04) % 360;
-
-      if (vinylRef.current) {
-        vinylRef.current.style.transform = `rotate(${rotation.current}deg)`;
-      }
+      vinylRotation.set(rotation.current);
 
       animRef.current = requestAnimationFrame(animateLoop);
     };
@@ -227,7 +236,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
       }}
       className="flex items-center justify-center select-none transform-gpu"
     >
-      {/* 🟢 Mobile CSS Animation Injection Anchor */}
+      {/* Mobile CSS Animation Injection Anchor */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes mobileVinylSpin {
           from { transform: rotate(0deg); }
@@ -306,10 +315,18 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
           }}
           className="transform-gpu"
         >
-          {/* 🟢 Appends the hardware CSS spin animation directly on mobile during regular tracks streaming */}
-          <div 
+          <motion.div 
             ref={vinylRef} 
-            className={`position-absolute inset-0 flex items-center justify-center will-change-transform transform-gpu ${
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              rotate: vinylRotation,
+              willChange: "transform"
+            }}
+            className={`transform-gpu ${
               isMobile && isPlaying && !isScratching ? "animate-mobile-vinyl" : ""
             }`}
           >
@@ -323,7 +340,7 @@ export default function VinylPlayer({ size = 280 }: VinylPlayerProps) {
               background: `repeating-radial-gradient(circle, rgba(0,0,0,0) 0px, rgba(0,0,0,0.05) 1px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.05) 3px)`,
               opacity: 0.6, pointerEvents: "none"
             }} />
-          </div>
+          </motion.div>
 
           {/* Dynamic Light/Gloss Overlay */}
           <motion.div 
