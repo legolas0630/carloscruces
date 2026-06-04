@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "space.carloscrucesmusic",
+      "sha256_cert_fingerprints": [
+        "74:0E:ED:8B:29:1C:11:A9:63:41:2B:2F:EF:D5:CC:18:BF:77:73:3C:07:E7:BD:C2:A1:0A:06:CF:C7:36:8C:4B"
+      ]
+    }
+  }
+]
